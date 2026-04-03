@@ -27,6 +27,9 @@ class UserFactory extends Factory
             'bio' => fake()->optional()->sentence(),
             'email_verified_at' => now(),
             'password' => static::$password ??= Hash::make('password'),
+            'avatar' => null,
+            'bio' => fake()->optional()->sentence(),
+            'locale' => fake()->randomElement(['en', 'nl']),
             'remember_token' => Str::random(10),
         ];
     }
