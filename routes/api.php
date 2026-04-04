@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\CommentLikeController;
 use App\Http\Controllers\Api\FeedController;
 use App\Http\Controllers\Api\LikeController;
 use App\Http\Controllers\Api\PostController;
+use App\Http\Controllers\Api\ProfileController;
 use Illuminate\Support\Facades\Route;
 
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('api.auth.login');
@@ -40,4 +41,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/circle-invitations', [CircleInvitationController::class, 'index'])->name('api.circle-invitations.index');
     Route::post('/circle-invitations/{circleInvitation}/accept', [CircleInvitationController::class, 'accept'])->name('api.circle-invitations.accept');
     Route::post('/circle-invitations/{circleInvitation}/decline', [CircleInvitationController::class, 'decline'])->name('api.circle-invitations.decline');
+
+    Route::get('/profiles/{user:username}', [ProfileController::class, 'show'])->name('api.profiles.show');
+    Route::get('/profiles/{user:username}/posts', [ProfileController::class, 'posts'])->name('api.profiles.posts');
 });
