@@ -5,8 +5,27 @@ namespace App\Http\Resources;
 use App\Models\Circle;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use OpenApi\Attributes as OA;
 
 /** @mixin Circle */
+#[OA\Schema(
+    schema: 'Circle',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer'),
+        new OA\Property(property: 'name', type: 'string'),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'members_count', type: 'integer'),
+        new OA\Property(property: 'members', type: 'array', items: new OA\Items(
+            properties: [
+                new OA\Property(property: 'id', type: 'integer'),
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'username', type: 'string'),
+                new OA\Property(property: 'avatar', type: 'string', nullable: true),
+            ],
+        )),
+    ],
+)]
 class CircleResource extends JsonResource
 {
     /**

@@ -11,11 +11,31 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use OpenApi\Attributes as OA;
 
 class CircleController extends Controller
 {
     use AuthorizesRequests;
 
+    #[OA\Get(
+        path: '/api/circles',
+        summary: 'List circles',
+        description: 'Return all circles for the authenticated user.',
+        tags: ['Circles'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'List of circles',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/Circle')),
+                    ],
+                ),
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ],
+    )]
     public function index(Request $request): AnonymousResourceCollection
     {
         $circles = $request->user()
@@ -27,6 +47,35 @@ class CircleController extends Controller
         return CircleResource::collection($circles);
     }
 
+    #[OA\Post(
+        path: '/api/circles',
+        summary: 'Create circle',
+        description: 'Create a new circle for the authenticated user.',
+        tags: ['Circles'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', maxLength: 255, example: 'Close Friends'),
+                ],
+            ),
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Circle created',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'data', ref: '#/components/schemas/Circle'),
+                    ],
+                ),
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ],
+    )]
     public function store(StoreCircleRequest $request): JsonResponse
     {
         $circle = $request->user()->circles()->create([
@@ -40,6 +89,30 @@ class CircleController extends Controller
             ->setStatusCode(201);
     }
 
+    #[OA\Get(
+        path: '/api/circles/{circle}',
+        summary: 'Show circle',
+        description: 'Return a single circle with its members.',
+        tags: ['Circles'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'circle', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Circle details',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'data', ref: '#/components/schemas/Circle'),
+                    ],
+                ),
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden'),
+            new OA\Response(response: 404, description: 'Circle not found'),
+        ],
+    )]
     public function show(Circle $circle): CircleResource
     {
         $this->authorize('view', $circle);
@@ -50,6 +123,39 @@ class CircleController extends Controller
         return new CircleResource($circle);
     }
 
+    #[OA\Put(
+        path: '/api/circles/{circle}',
+        summary: 'Update circle',
+        description: 'Update an existing circle. Requires ownership.',
+        tags: ['Circles'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'circle', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['name'],
+                properties: [
+                    new OA\Property(property: 'name', type: 'string', maxLength: 255, example: 'Best Friends'),
+                ],
+            ),
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Circle updated',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'data', ref: '#/components/schemas/Circle'),
+                    ],
+                ),
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ],
+    )]
     public function update(UpdateCircleRequest $request, Circle $circle): CircleResource
     {
         $this->authorize('update', $circle);
@@ -63,6 +169,22 @@ class CircleController extends Controller
         return new CircleResource($circle);
     }
 
+    #[OA\Delete(
+        path: '/api/circles/{circle}',
+        summary: 'Delete circle',
+        description: 'Delete a circle. Requires ownership.',
+        tags: ['Circles'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'circle', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Circle deleted'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden'),
+            new OA\Response(response: 404, description: 'Circle not found'),
+        ],
+    )]
     public function destroy(Circle $circle): JsonResponse
     {
         $this->authorize('delete', $circle);
