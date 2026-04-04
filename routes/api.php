@@ -9,26 +9,26 @@ use App\Http\Controllers\Api\LikeController;
 use App\Http\Controllers\Api\PostController;
 use Illuminate\Support\Facades\Route;
 
-Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1');
-Route::post('/auth/register', [AuthController::class, 'register']);
+Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('api.auth.login');
+Route::post('/auth/register', [AuthController::class, 'register'])->name('api.auth.register');
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/auth/me', [AuthController::class, 'me']);
-    Route::post('/auth/logout', [AuthController::class, 'logout']);
+    Route::get('/auth/me', [AuthController::class, 'me'])->name('api.auth.me');
+    Route::post('/auth/logout', [AuthController::class, 'logout'])->name('api.auth.logout');
 
-    Route::get('/feed', FeedController::class);
+    Route::get('/feed', FeedController::class)->name('api.feed');
 
-    Route::get('/posts/{post}', [PostController::class, 'show']);
-    Route::post('/posts', [PostController::class, 'store']);
-    Route::delete('/posts/{post}', [PostController::class, 'destroy']);
+    Route::get('/posts/{post}', [PostController::class, 'show'])->name('api.posts.show');
+    Route::post('/posts', [PostController::class, 'store'])->name('api.posts.store');
+    Route::delete('/posts/{post}', [PostController::class, 'destroy'])->name('api.posts.destroy');
 
-    Route::post('/posts/{post}/comments', [CommentController::class, 'store']);
-    Route::delete('/comments/{comment}', [CommentController::class, 'destroy']);
+    Route::post('/posts/{post}/comments', [CommentController::class, 'store'])->name('api.comments.store');
+    Route::delete('/comments/{comment}', [CommentController::class, 'destroy'])->name('api.comments.destroy');
 
-    Route::post('/posts/{post}/like', [LikeController::class, 'store']);
-    Route::delete('/posts/{post}/like', [LikeController::class, 'destroy']);
+    Route::post('/posts/{post}/like', [LikeController::class, 'store'])->name('api.likes.store');
+    Route::delete('/posts/{post}/like', [LikeController::class, 'destroy'])->name('api.likes.destroy');
 
     Route::apiResource('circles', CircleController::class);
-    Route::post('/circles/{circle}/members', [CircleMemberController::class, 'store']);
-    Route::delete('/circles/{circle}/members/{user}', [CircleMemberController::class, 'destroy']);
+    Route::post('/circles/{circle}/members', [CircleMemberController::class, 'store'])->name('api.circle-members.store');
+    Route::delete('/circles/{circle}/members/{user}', [CircleMemberController::class, 'destroy'])->name('api.circle-members.destroy');
 });
