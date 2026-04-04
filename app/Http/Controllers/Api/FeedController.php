@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\PostResource;
 use App\Models\Post;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use OpenApi\Attributes as OA;
 
@@ -34,10 +35,11 @@ class FeedController extends Controller
             new OA\Response(response: 401, description: 'Unauthenticated'),
         ],
     )]
-    public function __invoke(): AnonymousResourceCollection
+    public function __invoke(Request $request): AnonymousResourceCollection
     {
         $posts = Post::with('user:id,name,username,avatar')
             ->withCount(['likes', 'comments'])
+            ->withExists(['likes as is_liked' => fn ($query) => $query->where('user_id', $request->user()->id)])
             ->latest()
             ->paginate(10);
 
