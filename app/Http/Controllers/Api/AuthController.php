@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\UserResource;
+use App\Models\CircleInvitation;
 use App\Models\User;
+use App\Notifications\CircleInvitationAcceptedNotification;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -98,10 +100,29 @@ class AuthController extends Controller
     {
         $user = User::create($request->validated());
 
+        $this->acceptPendingInvitations($user);
+
         return response()->json([
             'token' => $user->createToken($request->device_name)->plainTextToken,
             'user' => new UserResource($user),
         ], 201);
+    }
+
+    private function acceptPendingInvitations(User $user): void
+    {
+        $invitations = CircleInvitation::with(['circle', 'inviter'])
+            ->where('email', $user->email)
+            ->whereNull('accepted_at')
+            ->get();
+
+        foreach ($invitations as $invitation) {
+            $invitation->update(['accepted_at' => now()]);
+            $invitation->circle->members()->syncWithoutDetaching([$user->id]);
+
+            $invitation->inviter->notify(
+                new CircleInvitationAcceptedNotification($invitation, $user->name),
+            );
+        }
     }
 
     #[OA\Get(

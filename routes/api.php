@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CircleController;
+use App\Http\Controllers\Api\CircleInvitationController;
 use App\Http\Controllers\Api\CircleMemberController;
 use App\Http\Controllers\Api\CommentController;
 use App\Http\Controllers\Api\CommentLikeController;
@@ -39,4 +40,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('circles', CircleController::class);
     Route::post('/circles/{circle}/members', [CircleMemberController::class, 'store'])->name('api.circle-members.store');
     Route::delete('/circles/{circle}/members/{user}', [CircleMemberController::class, 'destroy'])->name('api.circle-members.destroy');
+
+    Route::post('/circles/{circle}/invitations', [CircleInvitationController::class, 'store'])->name('api.circle-invitations.store');
+    Route::post('/circle-invitations/{token}/accept', [CircleInvitationController::class, 'accept'])->name('api.circle-invitations.accept');
 });
