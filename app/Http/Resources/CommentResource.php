@@ -5,8 +5,24 @@ namespace App\Http\Resources;
 use App\Models\Comment;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use OpenApi\Attributes as OA;
 
 /** @mixin Comment */
+#[OA\Schema(
+    schema: 'Comment',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer'),
+        new OA\Property(property: 'body', type: 'string'),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'user', type: 'object', properties: [
+            new OA\Property(property: 'id', type: 'integer'),
+            new OA\Property(property: 'name', type: 'string'),
+            new OA\Property(property: 'username', type: 'string'),
+            new OA\Property(property: 'avatar', type: 'string', nullable: true),
+        ]),
+    ],
+)]
 class CommentResource extends JsonResource
 {
     /**

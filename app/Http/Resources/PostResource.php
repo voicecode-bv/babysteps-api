@@ -5,8 +5,30 @@ namespace App\Http\Resources;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use OpenApi\Attributes as OA;
 
 /** @mixin Post */
+#[OA\Schema(
+    schema: 'Post',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer'),
+        new OA\Property(property: 'media_url', type: 'string'),
+        new OA\Property(property: 'media_type', type: 'string', enum: ['image', 'video']),
+        new OA\Property(property: 'caption', type: 'string', nullable: true),
+        new OA\Property(property: 'location', type: 'string', nullable: true),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
+        new OA\Property(property: 'user', type: 'object', properties: [
+            new OA\Property(property: 'id', type: 'integer'),
+            new OA\Property(property: 'name', type: 'string'),
+            new OA\Property(property: 'username', type: 'string'),
+            new OA\Property(property: 'avatar', type: 'string', nullable: true),
+        ]),
+        new OA\Property(property: 'likes_count', type: 'integer'),
+        new OA\Property(property: 'comments_count', type: 'integer'),
+        new OA\Property(property: 'comments', type: 'array', items: new OA\Items(ref: '#/components/schemas/Comment')),
+    ],
+)]
 class PostResource extends JsonResource
 {
     /**

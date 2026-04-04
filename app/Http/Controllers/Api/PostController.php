@@ -10,11 +10,35 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use OpenApi\Attributes as OA;
 
 class PostController extends Controller
 {
     use AuthorizesRequests;
 
+    #[OA\Get(
+        path: '/api/posts/{post}',
+        summary: 'Show post',
+        description: 'Return a single post with its comments and likes.',
+        tags: ['Posts'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'post', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Post details',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'data', ref: '#/components/schemas/Post'),
+                    ],
+                ),
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 404, description: 'Post not found'),
+        ],
+    )]
     public function show(Post $post): PostResource
     {
         $post->load([
@@ -27,6 +51,40 @@ class PostController extends Controller
         return new PostResource($post);
     }
 
+    #[OA\Post(
+        path: '/api/posts',
+        summary: 'Create post',
+        description: 'Create a new post with media upload.',
+        tags: ['Posts'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    required: ['media'],
+                    properties: [
+                        new OA\Property(property: 'media', type: 'string', format: 'binary', description: 'Image or video file (jpg, png, gif, mp4, mov). Max 50MB.'),
+                        new OA\Property(property: 'caption', type: 'string', maxLength: 2200, nullable: true),
+                        new OA\Property(property: 'location', type: 'string', maxLength: 255, nullable: true),
+                    ],
+                ),
+            ),
+        ),
+        responses: [
+            new OA\Response(
+                response: 201,
+                description: 'Post created',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'data', ref: '#/components/schemas/Post'),
+                    ],
+                ),
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ],
+    )]
     public function store(StorePostRequest $request): JsonResponse
     {
         $file = $request->file('media');
@@ -50,6 +108,22 @@ class PostController extends Controller
             ->setStatusCode(201);
     }
 
+    #[OA\Delete(
+        path: '/api/posts/{post}',
+        summary: 'Delete post',
+        description: 'Delete a post and its media. Requires ownership.',
+        tags: ['Posts'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'post', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Post deleted'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden'),
+            new OA\Response(response: 404, description: 'Post not found'),
+        ],
+    )]
     public function destroy(Request $request, Post $post): JsonResponse
     {
         $this->authorize('delete', $post);
