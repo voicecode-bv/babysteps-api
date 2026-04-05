@@ -67,17 +67,6 @@ class CircleMemberController extends Controller
     {
         $user = User::where('username', $request->validated('username'))->first();
 
-        $hasAcceptedBefore = CircleInvitation::where('circle_id', $circle->id)
-            ->where('user_id', $user->id)
-            ->where('status', InvitationStatus::Accepted)
-            ->exists();
-
-        if ($hasAcceptedBefore) {
-            $circle->members()->syncWithoutDetaching([$user->id]);
-
-            return response()->json(['message' => 'Member added.'], 201);
-        }
-
         CircleInvitation::updateOrCreate(
             [
                 'circle_id' => $circle->id,
