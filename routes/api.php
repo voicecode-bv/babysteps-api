@@ -42,6 +42,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/circle-invitations/{circleInvitation}/accept', [CircleInvitationController::class, 'accept'])->name('api.circle-invitations.accept');
     Route::post('/circle-invitations/{circleInvitation}/decline', [CircleInvitationController::class, 'decline'])->name('api.circle-invitations.decline');
 
+    Route::put('/profile', [ProfileController::class, 'update'])->name('api.profile.update');
     Route::get('/profiles/{user:username}', [ProfileController::class, 'show'])->name('api.profiles.show');
     Route::get('/profiles/{user:username}/posts', [ProfileController::class, 'posts'])->name('api.profiles.posts');
 });

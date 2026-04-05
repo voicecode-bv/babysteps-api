@@ -9,7 +9,9 @@ use App\Models\Post;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Laravel\Facades\Image;
 use OpenApi\Attributes as OA;
 
 class PostController extends Controller
@@ -97,6 +99,8 @@ class PostController extends Controller
     public function store(StorePostRequest $request): JsonResponse
     {
         $file = $request->file('media');
+        $file = $this->convertHeicToJpeg($file);
+
         $path = $file->store('posts', 'public');
 
         $mimeType = $file->getMimeType();
@@ -145,5 +149,26 @@ class PostController extends Controller
         $post->delete();
 
         return response()->json(null, 204);
+    }
+
+    private function convertHeicToJpeg(UploadedFile $file): UploadedFile
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        if (! in_array($extension, ['heic', 'heif'])) {
+            return $file;
+        }
+
+        $jpegPath = tempnam(sys_get_temp_dir(), 'heic_').'.jpg';
+
+        Image::decodePath($file->getPathname())
+            ->save($jpegPath, quality: 90);
+
+        return new UploadedFile(
+            $jpegPath,
+            pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.jpg',
+            'image/jpeg',
+            test: true,
+        );
     }
 }

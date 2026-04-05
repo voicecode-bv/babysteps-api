@@ -64,3 +64,55 @@ it('requires authentication to view profile posts', function () {
     $this->getJson("/api/profiles/{$user->username}/posts")
         ->assertUnauthorized();
 });
+
+it('can update own profile', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->putJson('/api/profile', [
+            'name' => 'Updated Name',
+            'bio' => 'My new bio',
+            'locale' => 'nl',
+        ])
+        ->assertSuccessful()
+        ->assertJsonPath('data.name', 'Updated Name')
+        ->assertJsonPath('data.bio', 'My new bio')
+        ->assertJsonPath('data.locale', 'nl');
+
+    expect($user->fresh())
+        ->name->toBe('Updated Name')
+        ->bio->toBe('My new bio')
+        ->locale->toBe('nl');
+});
+
+it('can update username to a unique value', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->putJson('/api/profile', ['username' => 'newusername'])
+        ->assertSuccessful()
+        ->assertJsonPath('data.username', 'newusername');
+});
+
+it('cannot update username to an existing one', function () {
+    User::factory()->create(['username' => 'taken']);
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->putJson('/api/profile', ['username' => 'taken'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('username');
+});
+
+it('allows keeping own username unchanged', function () {
+    $user = User::factory()->create(['username' => 'myname']);
+
+    $this->actingAs($user)
+        ->putJson('/api/profile', ['username' => 'myname'])
+        ->assertSuccessful();
+});
+
+it('requires authentication to update profile', function () {
+    $this->putJson('/api/profile', ['name' => 'Test'])
+        ->assertUnauthorized();
+});

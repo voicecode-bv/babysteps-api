@@ -199,3 +199,30 @@ it('requires authentication to delete a post', function () {
     $this->deleteJson("/api/posts/{$post->id}")
         ->assertUnauthorized();
 });
+
+it('converts heic uploads to jpeg', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create(['user_id' => $user->id]);
+
+    $imagick = new Imagick;
+    $imagick->newImage(100, 100, new ImagickPixel('red'));
+    $imagick->setImageFormat('png');
+    $heicPath = tempnam(sys_get_temp_dir(), 'heic_').'.heic';
+    $imagick->writeImage('png:'.$heicPath);
+    $imagick->destroy();
+
+    $this->actingAs($user)
+        ->postJson('/api/posts', [
+            'media' => new UploadedFile($heicPath, 'photo.heic', 'image/heic', test: true),
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('data.media_type', 'image');
+
+    $post = Post::first();
+    $storedFile = last(explode('/', $post->media_url));
+
+    expect($storedFile)->toEndWith('.jpg');
+    Storage::disk('public')->assertExists('posts/'.$storedFile);
+});
