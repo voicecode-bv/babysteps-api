@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Enums\InvitationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\CircleInvitationResource;
+use App\Models\Circle;
 use App\Models\CircleInvitation;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -45,6 +46,38 @@ class CircleInvitationController extends Controller
             ->get();
 
         return CircleInvitationResource::collection($invitations);
+    }
+
+    #[OA\Delete(
+        path: '/api/circles/{circle}/invitations/{circleInvitation}',
+        summary: 'Cancel invitation',
+        description: 'Cancel a pending circle invitation. Requires circle ownership.',
+        tags: ['Circle Invitations'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'circle', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+            new OA\Parameter(name: 'circleInvitation', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        responses: [
+            new OA\Response(response: 204, description: 'Invitation cancelled'),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden'),
+            new OA\Response(response: 404, description: 'Invitation not found'),
+        ],
+    )]
+    public function destroy(Request $request, Circle $circle, CircleInvitation $circleInvitation): JsonResponse
+    {
+        if ($circle->user_id !== $request->user()->id) {
+            abort(403);
+        }
+
+        if ($circleInvitation->circle_id !== $circle->id) {
+            abort(404);
+        }
+
+        $circleInvitation->delete();
+
+        return response()->json(null, 204);
     }
 
     #[OA\Post(
