@@ -94,7 +94,7 @@ class CircleMemberController extends Controller
 
     private function inviteByEmail(StoreCircleMemberRequest $request, Circle $circle): JsonResponse
     {
-        $email = $request->validated('email');
+        $email = strtolower($request->validated('email'));
         $existingUser = User::where('email', $email)->first();
 
         $invitation = CircleInvitation::updateOrCreate(

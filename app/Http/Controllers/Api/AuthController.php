@@ -100,7 +100,7 @@ class AuthController extends Controller
     {
         $user = User::create($request->validated());
 
-        CircleInvitation::where('email', $user->email)
+        CircleInvitation::whereRaw('LOWER(email) = ?', [strtolower($user->email)])
             ->where('status', InvitationStatus::Pending)
             ->whereNull('user_id')
             ->update(['user_id' => $user->id]);
