@@ -37,6 +37,7 @@ class CircleResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'photo' => MediaUrl::sign($this->photo),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
             'members_count' => $this->members_count ?? 0,

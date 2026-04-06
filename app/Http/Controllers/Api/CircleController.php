@@ -12,6 +12,9 @@ use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Laravel\Facades\Image;
 use OpenApi\Attributes as OA;
 
 class CircleController extends Controller
@@ -191,8 +194,70 @@ class CircleController extends Controller
     {
         $this->authorize('delete', $circle);
 
+        if ($circle->photo) {
+            Storage::disk('public')->delete($circle->photo);
+        }
+
         $circle->delete();
 
         return response()->json(null, 204);
+    }
+
+    public function updatePhoto(Request $request, Circle $circle): CircleResource
+    {
+        $this->authorize('update', $circle);
+
+        $request->validate([
+            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,gif,heic,heif', 'max:10240'],
+        ]);
+
+        if ($circle->photo) {
+            Storage::disk('public')->delete($circle->photo);
+        }
+
+        $file = $request->file('photo');
+        $file = $this->convertHeicToJpeg($file);
+
+        $path = $file->store('circles', 'public');
+
+        $circle->update(['photo' => $path]);
+        $circle->loadCount('members');
+
+        return new CircleResource($circle);
+    }
+
+    public function deletePhoto(Circle $circle): CircleResource
+    {
+        $this->authorize('update', $circle);
+
+        if ($circle->photo) {
+            Storage::disk('public')->delete($circle->photo);
+            $circle->update(['photo' => null]);
+        }
+
+        $circle->loadCount('members');
+
+        return new CircleResource($circle);
+    }
+
+    private function convertHeicToJpeg(UploadedFile $file): UploadedFile
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        if (! in_array($extension, ['heic', 'heif'])) {
+            return $file;
+        }
+
+        $jpegPath = tempnam(sys_get_temp_dir(), 'heic_').'.jpg';
+
+        Image::decodePath($file->getPathname())
+            ->save($jpegPath, quality: 90);
+
+        return new UploadedFile(
+            $jpegPath,
+            pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.jpg',
+            'image/jpeg',
+            test: true,
+        );
     }
 }
