@@ -2,6 +2,8 @@
 
 use App\Models\Post;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 it('can show a user profile', function () {
     $user = User::factory()->create();
@@ -114,5 +116,107 @@ it('allows keeping own username unchanged', function () {
 
 it('requires authentication to update profile', function () {
     $this->putJson('/api/profile', ['name' => 'Test'])
+        ->assertUnauthorized();
+});
+
+it('can upload an avatar', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson('/api/profile/avatar', [
+            'avatar' => UploadedFile::fake()->image('avatar.jpg', 200, 200),
+        ])
+        ->assertOk()
+        ->assertJsonStructure(['user' => ['avatar']]);
+
+    expect($user->fresh()->avatar)->not->toBeNull();
+
+    Storage::disk('public')->assertExists(
+        str_replace(Storage::disk('public')->url(''), '', $user->fresh()->avatar),
+    );
+});
+
+it('deletes old avatar when uploading a new one', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+
+    // Upload first avatar
+    $this->actingAs($user)
+        ->postJson('/api/profile/avatar', [
+            'avatar' => UploadedFile::fake()->image('first.jpg', 200, 200),
+        ])
+        ->assertOk();
+
+    $firstAvatarPath = str_replace(Storage::disk('public')->url(''), '', $user->fresh()->avatar);
+
+    // Upload second avatar
+    $this->actingAs($user)
+        ->postJson('/api/profile/avatar', [
+            'avatar' => UploadedFile::fake()->image('second.jpg', 200, 200),
+        ])
+        ->assertOk();
+
+    Storage::disk('public')->assertMissing($firstAvatarPath);
+    Storage::disk('public')->assertExists(
+        str_replace(Storage::disk('public')->url(''), '', $user->fresh()->avatar),
+    );
+});
+
+it('can delete avatar', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+
+    // Upload avatar first
+    $this->actingAs($user)
+        ->postJson('/api/profile/avatar', [
+            'avatar' => UploadedFile::fake()->image('avatar.jpg', 200, 200),
+        ])
+        ->assertOk();
+
+    $avatarPath = str_replace(Storage::disk('public')->url(''), '', $user->fresh()->avatar);
+
+    // Delete avatar
+    $this->actingAs($user)
+        ->deleteJson('/api/profile/avatar')
+        ->assertOk()
+        ->assertJsonPath('user.avatar', null);
+
+    expect($user->fresh()->avatar)->toBeNull();
+    Storage::disk('public')->assertMissing($avatarPath);
+});
+
+it('validates avatar must be an image', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson('/api/profile/avatar', [
+            'avatar' => UploadedFile::fake()->create('document.pdf', 100),
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('avatar');
+});
+
+it('validates avatar is required for upload', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson('/api/profile/avatar', [])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('avatar');
+});
+
+it('requires authentication to upload avatar', function () {
+    $this->postJson('/api/profile/avatar', [])
+        ->assertUnauthorized();
+});
+
+it('requires authentication to delete avatar', function () {
+    $this->deleteJson('/api/profile/avatar')
         ->assertUnauthorized();
 });

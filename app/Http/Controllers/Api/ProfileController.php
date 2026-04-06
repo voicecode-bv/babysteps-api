@@ -3,12 +3,17 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\UpdateAvatarRequest;
 use App\Http\Requests\UpdateProfileRequest;
 use App\Http\Resources\PostResource;
 use App\Http\Resources\ProfileResource;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Laravel\Facades\Image;
 use OpenApi\Attributes as OA;
 
 class ProfileController extends Controller
@@ -93,7 +98,6 @@ class ProfileController extends Controller
                     new OA\Property(property: 'name', type: 'string', example: 'John Doe'),
                     new OA\Property(property: 'username', type: 'string', example: 'johndoe'),
                     new OA\Property(property: 'bio', type: 'string', nullable: true, example: 'Hello world'),
-                    new OA\Property(property: 'avatar', type: 'string', nullable: true, example: 'https://example.com/avatar.jpg'),
                     new OA\Property(property: 'locale', type: 'string', example: 'en'),
                 ],
             ),
@@ -117,5 +121,115 @@ class ProfileController extends Controller
         $request->user()->update($request->validated());
 
         return new UserResource($request->user());
+    }
+
+    #[OA\Post(
+        path: '/api/profile/avatar',
+        summary: 'Upload avatar',
+        description: 'Upload a new avatar image for the authenticated user. Accepts JPG, PNG, GIF, and HEIC formats.',
+        tags: ['Profiles'],
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\MediaType(
+                mediaType: 'multipart/form-data',
+                schema: new OA\Schema(
+                    required: ['avatar'],
+                    properties: [
+                        new OA\Property(property: 'avatar', type: 'string', format: 'binary'),
+                    ],
+                ),
+            ),
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Avatar updated',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'user', ref: '#/components/schemas/User'),
+                    ],
+                ),
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ],
+    )]
+    public function updateAvatar(UpdateAvatarRequest $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if ($user->avatar) {
+            $oldPath = str_replace(Storage::disk('public')->url(''), '', $user->avatar);
+            Storage::disk('public')->delete($oldPath);
+        }
+
+        $file = $request->file('avatar');
+        $file = $this->convertHeicToJpeg($file);
+
+        $path = $file->store('avatars', 'public');
+
+        $user->update(['avatar' => Storage::disk('public')->url($path)]);
+
+        return response()->json([
+            'user' => new UserResource($user),
+        ]);
+    }
+
+    #[OA\Delete(
+        path: '/api/profile/avatar',
+        summary: 'Delete avatar',
+        description: 'Remove the authenticated user\'s avatar.',
+        tags: ['Profiles'],
+        security: [['sanctum' => []]],
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Avatar removed',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'user', ref: '#/components/schemas/User'),
+                    ],
+                ),
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+        ],
+    )]
+    public function deleteAvatar(): JsonResponse
+    {
+        $user = request()->user();
+
+        if ($user->avatar) {
+            $oldPath = str_replace(Storage::disk('public')->url(''), '', $user->avatar);
+            Storage::disk('public')->delete($oldPath);
+
+            $user->update(['avatar' => null]);
+        }
+
+        return response()->json([
+            'user' => new UserResource($user),
+        ]);
+    }
+
+    private function convertHeicToJpeg(UploadedFile $file): UploadedFile
+    {
+        $extension = strtolower($file->getClientOriginalExtension());
+
+        if (! in_array($extension, ['heic', 'heif'])) {
+            return $file;
+        }
+
+        $jpegPath = tempnam(sys_get_temp_dir(), 'heic_').'.jpg';
+
+        Image::decodePath($file->getPathname())
+            ->save($jpegPath, quality: 90);
+
+        return new UploadedFile(
+            $jpegPath,
+            pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.jpg',
+            'image/jpeg',
+            null,
+            true,
+        );
     }
 }
