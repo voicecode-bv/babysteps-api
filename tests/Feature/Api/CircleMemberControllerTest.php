@@ -32,7 +32,7 @@ it('sends an invitation instead of adding a member directly', function () {
     ]);
 });
 
-it('adds a member directly when they have previously accepted an invitation', function () {
+it('sends a new invitation even when user has previously accepted one for the same circle', function () {
     $owner = User::factory()->create();
     $circle = Circle::factory()->for($owner)->create();
     $invitee = User::factory()->create();
@@ -49,11 +49,12 @@ it('adds a member directly when they have previously accepted an invitation', fu
             'username' => $invitee->username,
         ])
         ->assertCreated()
-        ->assertJsonPath('message', 'Member added.');
+        ->assertJsonPath('message', 'Invitation sent.');
 
-    $this->assertDatabaseHas('circle_user', [
+    $this->assertDatabaseHas('circle_invitations', [
         'circle_id' => $circle->id,
         'user_id' => $invitee->id,
+        'status' => InvitationStatus::Pending->value,
     ]);
 });
 

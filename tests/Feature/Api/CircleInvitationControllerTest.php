@@ -110,3 +110,34 @@ it('cannot accept an already declined invitation', function () {
         ->postJson("/api/circle-invitations/{$invitation->id}/accept")
         ->assertForbidden();
 });
+
+it('can accept a new invitation when a previous one was already accepted for the same circle', function () {
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create();
+
+    // Old accepted invitation
+    CircleInvitation::factory()->create([
+        'circle_id' => $circle->id,
+        'user_id' => $user->id,
+        'status' => InvitationStatus::Accepted,
+    ]);
+
+    // New pending invitation for the same circle
+    $newInvitation = CircleInvitation::factory()->create([
+        'circle_id' => $circle->id,
+        'user_id' => $user->id,
+        'status' => InvitationStatus::Pending,
+    ]);
+
+    $this->actingAs($user)
+        ->postJson("/api/circle-invitations/{$newInvitation->id}/accept")
+        ->assertOk()
+        ->assertJsonPath('message', 'Invitation accepted.');
+
+    expect($newInvitation->fresh()->status)->toBe(InvitationStatus::Accepted);
+
+    // Old record should be cleaned up
+    expect(CircleInvitation::where('circle_id', $circle->id)
+        ->where('user_id', $user->id)
+        ->count())->toBe(1);
+});

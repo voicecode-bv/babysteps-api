@@ -115,6 +115,12 @@ class CircleInvitationController extends Controller
             abort(403);
         }
 
+        CircleInvitation::where('circle_id', $circleInvitation->circle_id)
+            ->where('user_id', $circleInvitation->user_id)
+            ->where('id', '!=', $circleInvitation->id)
+            ->whereNot('status', InvitationStatus::Pending)
+            ->delete();
+
         $circleInvitation->update(['status' => InvitationStatus::Accepted]);
 
         $circleInvitation->circle->members()->syncWithoutDetaching([$circleInvitation->user_id]);
