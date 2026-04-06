@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Circle;
+use App\Support\MediaUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use OpenApi\Attributes as OA;
@@ -43,7 +44,7 @@ class CircleResource extends JsonResource
                 'id' => $member->id,
                 'name' => $member->name,
                 'username' => $member->username,
-                'avatar' => $member->avatar,
+                'avatar' => MediaUrl::sign($member->avatar),
             ])),
             'pending_invitations' => $this->whenLoaded('invitations', fn () => $this->invitations->map(fn ($invitation) => [
                 'id' => $invitation->id,

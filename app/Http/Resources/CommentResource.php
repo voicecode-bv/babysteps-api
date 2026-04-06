@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Comment;
+use App\Support\MediaUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use OpenApi\Attributes as OA;
@@ -41,7 +42,7 @@ class CommentResource extends JsonResource
                 'id' => $this->user->id,
                 'name' => $this->user->name,
                 'username' => $this->user->username,
-                'avatar' => $this->user->avatar,
+                'avatar' => MediaUrl::sign($this->user->avatar),
             ],
             'likes_count' => $this->likes_count ?? 0,
             'is_liked' => (bool) ($this->is_liked ?? false),

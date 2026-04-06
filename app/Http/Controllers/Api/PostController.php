@@ -107,7 +107,7 @@ class PostController extends Controller
         $mediaType = str_starts_with($mimeType, 'video/') ? 'video' : 'image';
 
         $post = $request->user()->posts()->create([
-            'media_url' => Storage::disk('public')->url($path),
+            'media_url' => $path,
             'media_type' => $mediaType,
             'caption' => $request->validated('caption'),
             'location' => $request->validated('location'),
@@ -143,8 +143,7 @@ class PostController extends Controller
     {
         $this->authorize('delete', $post);
 
-        $mediaPath = str_replace(Storage::disk('public')->url(''), '', $post->media_url);
-        Storage::disk('public')->delete($mediaPath);
+        Storage::disk('public')->delete($post->media_url);
 
         $post->delete();
 

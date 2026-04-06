@@ -160,8 +160,7 @@ class ProfileController extends Controller
         $user = $request->user();
 
         if ($user->avatar) {
-            $oldPath = str_replace(Storage::disk('public')->url(''), '', $user->avatar);
-            Storage::disk('public')->delete($oldPath);
+            Storage::disk('public')->delete($user->avatar);
         }
 
         $file = $request->file('avatar');
@@ -169,7 +168,7 @@ class ProfileController extends Controller
 
         $path = $file->store('avatars', 'public');
 
-        $user->update(['avatar' => Storage::disk('public')->url($path)]);
+        $user->update(['avatar' => $path]);
 
         return response()->json([
             'user' => new UserResource($user),
@@ -200,9 +199,7 @@ class ProfileController extends Controller
         $user = request()->user();
 
         if ($user->avatar) {
-            $oldPath = str_replace(Storage::disk('public')->url(''), '', $user->avatar);
-            Storage::disk('public')->delete($oldPath);
-
+            Storage::disk('public')->delete($user->avatar);
             $user->update(['avatar' => null]);
         }
 

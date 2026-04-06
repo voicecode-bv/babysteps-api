@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Post;
+use App\Support\MediaUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use OpenApi\Attributes as OA;
@@ -39,7 +40,7 @@ class PostResource extends JsonResource
     {
         $data = [
             'id' => $this->id,
-            'media_url' => $this->media_url,
+            'media_url' => MediaUrl::sign($this->media_url),
             'media_type' => $this->media_type,
             'caption' => $this->caption,
             'location' => $this->location,
@@ -49,7 +50,7 @@ class PostResource extends JsonResource
                 'id' => $this->user->id,
                 'name' => $this->user->name,
                 'username' => $this->user->username,
-                'avatar' => $this->user->avatar,
+                'avatar' => MediaUrl::sign($this->user->avatar),
             ],
             'likes_count' => $this->likes_count ?? 0,
             'comments_count' => $this->comments_count ?? 0,

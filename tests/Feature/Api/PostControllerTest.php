@@ -173,7 +173,7 @@ it('can delete own post', function () {
     $user = User::factory()->create();
     $post = Post::factory()->create([
         'user_id' => $user->id,
-        'media_url' => Storage::disk('public')->url('posts/photo.jpg'),
+        'media_url' => 'posts/photo.jpg',
     ]);
     Storage::disk('public')->put('posts/photo.jpg', 'fake-image');
 

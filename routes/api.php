@@ -11,7 +11,13 @@ use App\Http\Controllers\Api\LikeController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\MediaController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/media/{path}', MediaController::class)
+    ->where('path', '.*')
+    ->middleware('signed')
+    ->name('api.media');
 
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('api.auth.login');
 Route::post('/auth/register', [AuthController::class, 'register'])->name('api.auth.register');

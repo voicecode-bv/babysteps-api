@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\User;
+use App\Support\MediaUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 use OpenApi\Attributes as OA;
@@ -31,7 +32,7 @@ class ProfileResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'username' => $this->username,
-            'avatar' => $this->avatar,
+            'avatar' => MediaUrl::sign($this->avatar),
             'bio' => $this->bio,
             'created_at' => $this->created_at,
             'posts_count' => $this->posts_count ?? 0,
