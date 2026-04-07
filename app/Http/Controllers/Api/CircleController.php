@@ -22,7 +22,7 @@ class CircleController extends Controller
     #[OA\Get(
         path: '/api/circles',
         summary: 'List circles',
-        description: 'Return all circles for the authenticated user.',
+        description: 'Return all circles the authenticated user owns or is a member of. Each circle includes an `is_owner` flag.',
         tags: ['Circles'],
         security: [['sanctum' => []]],
         responses: [
@@ -66,6 +66,7 @@ class CircleController extends Controller
                 required: ['name'],
                 properties: [
                     new OA\Property(property: 'name', type: 'string', maxLength: 255, example: 'Close Friends'),
+                    new OA\Property(property: 'members_can_invite', type: 'boolean', example: false),
                 ],
             ),
         ),
@@ -97,7 +98,7 @@ class CircleController extends Controller
     #[OA\Get(
         path: '/api/circles/{circle}',
         summary: 'Show circle',
-        description: 'Return a single circle with its members.',
+        description: 'Return a single circle with its members (including the owner). Accessible to the owner and to circle members. Pending invitations are only included for the owner, or for members when `members_can_invite` is true.',
         tags: ['Circles'],
         security: [['sanctum' => []]],
         parameters: [
@@ -149,6 +150,7 @@ class CircleController extends Controller
                 required: ['name'],
                 properties: [
                     new OA\Property(property: 'name', type: 'string', maxLength: 255, example: 'Best Friends'),
+                    new OA\Property(property: 'members_can_invite', type: 'boolean', example: true),
                 ],
             ),
         ),

@@ -23,7 +23,7 @@ class CircleMemberController extends Controller
     #[OA\Post(
         path: '/api/circles/{circle}/members',
         summary: 'Invite member',
-        description: 'Invite a user to a circle by username or email. If inviting by username and the user has previously accepted an invitation to this circle, they are added directly. If inviting by email, an email notification is always sent.',
+        description: 'Invite a user to a circle by username or email. Available to the circle owner, and to members when the circle has `members_can_invite` enabled. When a non-owner member sends the invitation, the circle owner receives a notification. If inviting by email, an email notification is always sent to the invitee.',
         tags: ['Circle Members'],
         security: [['sanctum' => []]],
         parameters: [
@@ -119,7 +119,7 @@ class CircleMemberController extends Controller
     #[OA\Delete(
         path: '/api/circles/{circle}/members/{user}',
         summary: 'Remove member',
-        description: 'Remove a user from a circle. Requires circle ownership.',
+        description: 'Remove a user from a circle. Requires circle ownership. The owner cannot be removed from their own circle.',
         tags: ['Circle Members'],
         security: [['sanctum' => []]],
         parameters: [

@@ -14,18 +14,34 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'id', type: 'integer'),
         new OA\Property(property: 'name', type: 'string'),
-        new OA\Property(property: 'is_owner', type: 'boolean'),
+        new OA\Property(property: 'is_owner', type: 'boolean', description: 'Whether the authenticated user is the owner of this circle.'),
+        new OA\Property(property: 'members_can_invite', type: 'boolean', description: 'Whether non-owner members are allowed to invite others to this circle.'),
+        new OA\Property(property: 'photo', type: 'string', nullable: true),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
-        new OA\Property(property: 'members_count', type: 'integer'),
-        new OA\Property(property: 'members', type: 'array', items: new OA\Items(
+        new OA\Property(property: 'members_count', type: 'integer', description: 'Total number of members including the owner.'),
+        new OA\Property(property: 'members', type: 'array', description: 'Members of the circle, including the owner.', items: new OA\Items(
             properties: [
                 new OA\Property(property: 'id', type: 'integer'),
                 new OA\Property(property: 'name', type: 'string'),
                 new OA\Property(property: 'username', type: 'string'),
                 new OA\Property(property: 'avatar', type: 'string', nullable: true),
+                new OA\Property(property: 'is_owner', type: 'boolean'),
             ],
         )),
+        new OA\Property(
+            property: 'pending_invitations',
+            type: 'array',
+            description: 'Pending invitations for this circle. Only returned to the owner, or to members when members_can_invite is true.',
+            items: new OA\Items(
+                properties: [
+                    new OA\Property(property: 'id', type: 'integer'),
+                    new OA\Property(property: 'email', type: 'string', nullable: true),
+                    new OA\Property(property: 'username', type: 'string', nullable: true),
+                    new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
+                ],
+            ),
+        ),
     ],
 )]
 class CircleResource extends JsonResource
