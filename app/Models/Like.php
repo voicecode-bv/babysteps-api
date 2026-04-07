@@ -15,6 +15,17 @@ class Like extends Model
     /** @use HasFactory<LikeFactory> */
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::created(function (Like $like) {
+            $like->likeable()->increment('likes_count');
+        });
+
+        static::deleted(function (Like $like) {
+            $like->likeable()->decrement('likes_count');
+        });
+    }
+
     /**
      * @return BelongsTo<User, $this>
      */

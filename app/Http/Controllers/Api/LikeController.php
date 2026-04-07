@@ -50,7 +50,7 @@ class LikeController extends Controller
 
         return response()->json([
             'liked' => true,
-            'likes_count' => $post->likes()->count(),
+            'likes_count' => $post->refresh()->likes_count,
         ], 201);
     }
 
@@ -82,11 +82,13 @@ class LikeController extends Controller
     {
         $post->likes()
             ->where('user_id', $request->user()->id)
+            ->get()
+            ->each
             ->delete();
 
         return response()->json([
             'liked' => false,
-            'likes_count' => $post->likes()->count(),
+            'likes_count' => $post->refresh()->likes_count,
         ]);
     }
 }

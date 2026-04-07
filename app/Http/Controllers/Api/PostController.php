@@ -45,7 +45,6 @@ class PostController extends Controller
             'user:id,name,username,avatar',
             'comments' => fn ($query) => $query->oldest()
                 ->with('user:id,name,username,avatar')
-                ->withCount('likes')
                 ->withExists(['likes as is_liked' => fn ($q) => $q->where('user_id', $request->user()->id)]),
             'likes',
         ];
@@ -54,7 +53,7 @@ class PostController extends Controller
             $relations[] = 'circles:id,name';
         }
 
-        $post->load($relations)->loadCount(['likes', 'comments']);
+        $post->load($relations);
 
         return new PostResource($post);
     }
@@ -112,8 +111,7 @@ class PostController extends Controller
 
         $post->circles()->attach($request->validated('circle_ids'));
 
-        $post->load('user:id,name,username,avatar')
-            ->loadCount(['likes', 'comments']);
+        $post->load('user:id,name,username,avatar');
 
         return (new PostResource($post))
             ->response()

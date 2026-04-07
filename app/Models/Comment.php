@@ -15,6 +15,17 @@ class Comment extends Model
     /** @use HasFactory<CommentFactory> */
     use HasFactory;
 
+    protected static function booted(): void
+    {
+        static::created(function (Comment $comment) {
+            $comment->post()->increment('comments_count');
+        });
+
+        static::deleted(function (Comment $comment) {
+            $comment->post()->decrement('comments_count');
+        });
+    }
+
     /**
      * @return BelongsTo<User, $this>
      */

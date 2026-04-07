@@ -77,7 +77,6 @@ class ProfileController extends Controller
     {
         $posts = $user->posts()
             ->with('user:id,name,username,avatar')
-            ->withCount(['likes', 'comments'])
             ->withExists(['likes as is_liked' => fn ($query) => $query->where('user_id', $request->user()->id)])
             ->latest()
             ->paginate(10);

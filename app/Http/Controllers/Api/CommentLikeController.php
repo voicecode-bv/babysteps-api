@@ -50,7 +50,7 @@ class CommentLikeController extends Controller
 
         return response()->json([
             'liked' => true,
-            'likes_count' => $comment->likes()->count(),
+            'likes_count' => $comment->refresh()->likes_count,
         ], 201);
     }
 
@@ -82,11 +82,13 @@ class CommentLikeController extends Controller
     {
         $comment->likes()
             ->where('user_id', $request->user()->id)
+            ->get()
+            ->each
             ->delete();
 
         return response()->json([
             'liked' => false,
-            'likes_count' => $comment->likes()->count(),
+            'likes_count' => $comment->refresh()->likes_count,
         ]);
     }
 }

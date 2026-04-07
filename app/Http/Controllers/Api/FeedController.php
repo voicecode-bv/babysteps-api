@@ -47,7 +47,6 @@ class FeedController extends Controller
                             ->orWhereHas('members', fn ($m) => $m->where('users.id', $user->id));
                     });
             })
-            ->withCount(['likes', 'comments'])
             ->withExists(['likes as is_liked' => fn ($query) => $query->where('user_id', $user->id)])
             ->latest()
             ->paginate(10);
