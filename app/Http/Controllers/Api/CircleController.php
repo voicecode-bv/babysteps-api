@@ -8,13 +8,11 @@ use App\Http\Requests\StoreCircleRequest;
 use App\Http\Requests\UpdateCircleRequest;
 use App\Http\Resources\CircleResource;
 use App\Models\Circle;
-use App\Support\MediaUrl;
+use App\Services\MediaUploadService;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\UploadedFile;
-use Intervention\Image\Laravel\Facades\Image;
 use OpenApi\Attributes as OA;
 
 class CircleController extends Controller
@@ -203,7 +201,7 @@ class CircleController extends Controller
         return response()->json(null, 204);
     }
 
-    public function updatePhoto(Request $request, Circle $circle): CircleResource
+    public function updatePhoto(Request $request, Circle $circle, MediaUploadService $media): CircleResource
     {
         $this->authorize('update', $circle);
 
@@ -211,14 +209,9 @@ class CircleController extends Controller
             'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,gif,heic,heif', 'max:10240'],
         ]);
 
-        if ($circle->photo) {
-            MediaUrl::disk()->delete($circle->photo);
-        }
+        $media->delete($circle->photo);
 
-        $file = $request->file('photo');
-        $file = $this->convertHeicToJpeg($file);
-
-        $path = $file->store('circles', config('filesystems.media'));
+        $path = $media->store($request->file('photo'), $request->user()->id, 'circles');
 
         $circle->update(['photo' => $path]);
         $circle->loadCount('members');
@@ -226,38 +219,17 @@ class CircleController extends Controller
         return new CircleResource($circle);
     }
 
-    public function deletePhoto(Circle $circle): CircleResource
+    public function deletePhoto(Circle $circle, MediaUploadService $media): CircleResource
     {
         $this->authorize('update', $circle);
 
         if ($circle->photo) {
-            MediaUrl::disk()->delete($circle->photo);
+            $media->delete($circle->photo);
             $circle->update(['photo' => null]);
         }
 
         $circle->loadCount('members');
 
         return new CircleResource($circle);
-    }
-
-    private function convertHeicToJpeg(UploadedFile $file): UploadedFile
-    {
-        $extension = strtolower($file->getClientOriginalExtension());
-
-        if (! in_array($extension, ['heic', 'heif'])) {
-            return $file;
-        }
-
-        $jpegPath = tempnam(sys_get_temp_dir(), 'heic_').'.jpg';
-
-        Image::decodePath($file->getPathname())
-            ->save($jpegPath, quality: 90);
-
-        return new UploadedFile(
-            $jpegPath,
-            pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.jpg',
-            'image/jpeg',
-            test: true,
-        );
     }
 }

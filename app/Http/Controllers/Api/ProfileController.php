@@ -9,11 +9,9 @@ use App\Http\Resources\PostResource;
 use App\Http\Resources\ProfileResource;
 use App\Http\Resources\UserResource;
 use App\Models\User;
-use App\Support\MediaUrl;
+use App\Services\MediaUploadService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
-use Illuminate\Http\UploadedFile;
-use Intervention\Image\Laravel\Facades\Image;
 use OpenApi\Attributes as OA;
 
 class ProfileController extends Controller
@@ -155,18 +153,13 @@ class ProfileController extends Controller
             new OA\Response(response: 422, description: 'Validation error'),
         ],
     )]
-    public function updateAvatar(UpdateAvatarRequest $request): JsonResponse
+    public function updateAvatar(UpdateAvatarRequest $request, MediaUploadService $media): JsonResponse
     {
         $user = $request->user();
 
-        if ($user->avatar) {
-            MediaUrl::disk()->delete($user->avatar);
-        }
+        $media->delete($user->avatar);
 
-        $file = $request->file('avatar');
-        $file = $this->convertHeicToJpeg($file);
-
-        $path = $file->store('avatars', config('filesystems.media'));
+        $path = $media->store($request->file('avatar'), $user->id, 'avatars');
 
         $user->update(['avatar' => $path]);
 
@@ -194,39 +187,17 @@ class ProfileController extends Controller
             new OA\Response(response: 401, description: 'Unauthenticated'),
         ],
     )]
-    public function deleteAvatar(): JsonResponse
+    public function deleteAvatar(MediaUploadService $media): JsonResponse
     {
         $user = request()->user();
 
         if ($user->avatar) {
-            MediaUrl::disk()->delete($user->avatar);
+            $media->delete($user->avatar);
             $user->update(['avatar' => null]);
         }
 
         return response()->json([
             'user' => new UserResource($user),
         ]);
-    }
-
-    private function convertHeicToJpeg(UploadedFile $file): UploadedFile
-    {
-        $extension = strtolower($file->getClientOriginalExtension());
-
-        if (! in_array($extension, ['heic', 'heif'])) {
-            return $file;
-        }
-
-        $jpegPath = tempnam(sys_get_temp_dir(), 'heic_').'.jpg';
-
-        Image::decodePath($file->getPathname())
-            ->save($jpegPath, quality: 90);
-
-        return new UploadedFile(
-            $jpegPath,
-            pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME).'.jpg',
-            'image/jpeg',
-            null,
-            true,
-        );
     }
 }
