@@ -211,7 +211,14 @@ class CircleController extends Controller
 
         $media->delete($circle->photo);
 
-        $path = $media->store($request->file('photo'), $request->user()->id, 'circles');
+        $path = $media->store(
+            $request->file('photo'),
+            $request->user()->id,
+            'circles',
+            width: 500,
+            height: 500,
+            cover: true,
+        );
 
         $circle->update(['photo' => $path]);
         $circle->loadCount('members');
