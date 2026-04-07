@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Circle;
+use App\Models\CircleInvitation;
 use App\Models\User;
 
 it('returns circles owned by the user with is_owner true', function () {
@@ -40,6 +41,63 @@ it('does not return circles the user has no relation to', function () {
         ->getJson('/api/circles')
         ->assertOk()
         ->assertJsonCount(0, 'data');
+});
+
+it('allows a member to view a circle and its members', function () {
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create();
+    $member = User::factory()->create();
+    $other = User::factory()->create();
+    $circle->members()->attach([$member->id, $other->id]);
+
+    $this->actingAs($member)
+        ->getJson("/api/circles/{$circle->id}")
+        ->assertOk()
+        ->assertJsonPath('data.id', $circle->id)
+        ->assertJsonPath('data.is_owner', false)
+        ->assertJsonCount(2, 'data.members');
+});
+
+it('does not expose pending invitations to non-owner members', function () {
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create();
+    $member = User::factory()->create();
+    $circle->members()->attach($member);
+
+    CircleInvitation::factory()->create([
+        'circle_id' => $circle->id,
+        'inviter_id' => $owner->id,
+    ]);
+
+    $this->actingAs($member)
+        ->getJson("/api/circles/{$circle->id}")
+        ->assertOk()
+        ->assertJsonMissingPath('data.pending_invitations');
+});
+
+it('exposes pending invitations to members when members_can_invite is true', function () {
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create(['members_can_invite' => true]);
+    $member = User::factory()->create();
+    $circle->members()->attach($member);
+
+    CircleInvitation::factory()->create([
+        'circle_id' => $circle->id,
+        'inviter_id' => $owner->id,
+    ]);
+
+    $this->actingAs($member)
+        ->getJson("/api/circles/{$circle->id}")
+        ->assertOk()
+        ->assertJsonCount(1, 'data.pending_invitations');
+});
+
+it('forbids users with no relation from viewing a circle', function () {
+    $circle = Circle::factory()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->getJson("/api/circles/{$circle->id}")
+        ->assertForbidden();
 });
 
 it('does not duplicate a circle if the user is both owner and member', function () {

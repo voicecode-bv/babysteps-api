@@ -118,13 +118,16 @@ class CircleController extends Controller
             new OA\Response(response: 404, description: 'Circle not found'),
         ],
     )]
-    public function show(Circle $circle): CircleResource
+    public function show(Request $request, Circle $circle): CircleResource
     {
         $this->authorize('view', $circle);
 
         $circle->load('members:id,name,username,avatar')
-            ->loadCount('members')
-            ->load(['invitations' => fn ($query) => $query->where('status', InvitationStatus::Pending)->with('user:id,username')]);
+            ->loadCount('members');
+
+        if ($request->user()->id === $circle->user_id || $circle->members_can_invite) {
+            $circle->load(['invitations' => fn ($query) => $query->where('status', InvitationStatus::Pending)->with('user:id,username')]);
+        }
 
         return new CircleResource($circle);
     }
