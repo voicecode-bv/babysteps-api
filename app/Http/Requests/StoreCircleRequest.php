@@ -18,6 +18,7 @@ class StoreCircleRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'members_can_invite' => ['sometimes', 'boolean'],
         ];
     }
 }

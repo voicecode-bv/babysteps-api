@@ -21,4 +21,17 @@ class CirclePolicy
     {
         return $user->id === $circle->user_id;
     }
+
+    public function invite(User $user, Circle $circle): bool
+    {
+        if ($user->id === $circle->user_id) {
+            return true;
+        }
+
+        if (! $circle->members_can_invite) {
+            return false;
+        }
+
+        return $circle->members()->whereKey($user->id)->exists();
+    }
 }

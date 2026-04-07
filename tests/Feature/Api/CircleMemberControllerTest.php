@@ -5,6 +5,7 @@ use App\Models\Circle;
 use App\Models\CircleInvitation;
 use App\Models\User;
 use App\Notifications\CircleInvitationNotification;
+use App\Notifications\CircleMemberInvitedByMemberNotification;
 use Illuminate\Support\Facades\Notification;
 
 it('sends an invitation instead of adding a member directly', function () {
@@ -83,6 +84,83 @@ it('does not create duplicate pending invitations', function () {
 
 it('requires circle ownership to invite a member', function () {
     $circle = Circle::factory()->create();
+    $invitee = User::factory()->create();
+
+    $this->actingAs(User::factory()->create())
+        ->postJson("/api/circles/{$circle->id}/members", [
+            'username' => $invitee->username,
+        ])
+        ->assertForbidden();
+});
+
+it('forbids members from inviting when members_can_invite is false', function () {
+    $circle = Circle::factory()->create(['members_can_invite' => false]);
+    $member = User::factory()->create();
+    $circle->members()->attach($member);
+    $invitee = User::factory()->create();
+
+    $this->actingAs($member)
+        ->postJson("/api/circles/{$circle->id}/members", [
+            'username' => $invitee->username,
+        ])
+        ->assertForbidden();
+});
+
+it('allows members to invite when members_can_invite is true', function () {
+    $circle = Circle::factory()->create(['members_can_invite' => true]);
+    $member = User::factory()->create();
+    $circle->members()->attach($member);
+    $invitee = User::factory()->create();
+
+    $this->actingAs($member)
+        ->postJson("/api/circles/{$circle->id}/members", [
+            'username' => $invitee->username,
+        ])
+        ->assertCreated();
+
+    $this->assertDatabaseHas('circle_invitations', [
+        'circle_id' => $circle->id,
+        'user_id' => $invitee->id,
+        'inviter_id' => $member->id,
+    ]);
+});
+
+it('notifies the circle owner when a member invites someone else', function () {
+    Notification::fake();
+
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create(['members_can_invite' => true]);
+    $member = User::factory()->create();
+    $circle->members()->attach($member);
+    $invitee = User::factory()->create();
+
+    $this->actingAs($member)
+        ->postJson("/api/circles/{$circle->id}/members", [
+            'username' => $invitee->username,
+        ])
+        ->assertCreated();
+
+    Notification::assertSentTo($owner, CircleMemberInvitedByMemberNotification::class);
+});
+
+it('does not notify the owner when the owner invites someone', function () {
+    Notification::fake();
+
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create();
+    $invitee = User::factory()->create();
+
+    $this->actingAs($owner)
+        ->postJson("/api/circles/{$circle->id}/members", [
+            'username' => $invitee->username,
+        ])
+        ->assertCreated();
+
+    Notification::assertNotSentTo($owner, CircleMemberInvitedByMemberNotification::class);
+});
+
+it('forbids non-members from inviting even when members_can_invite is true', function () {
+    $circle = Circle::factory()->create(['members_can_invite' => true]);
     $invitee = User::factory()->create();
 
     $this->actingAs(User::factory()->create())

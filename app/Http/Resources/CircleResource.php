@@ -14,6 +14,7 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'id', type: 'integer'),
         new OA\Property(property: 'name', type: 'string'),
+        new OA\Property(property: 'is_owner', type: 'boolean'),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
         new OA\Property(property: 'members_count', type: 'integer'),
@@ -37,6 +38,8 @@ class CircleResource extends JsonResource
         return [
             'id' => $this->id,
             'name' => $this->name,
+            'is_owner' => $this->user_id === $request->user()?->id,
+            'members_can_invite' => $this->members_can_invite,
             'photo' => MediaUrl::sign($this->photo),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

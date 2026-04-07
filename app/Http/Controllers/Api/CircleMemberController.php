@@ -9,6 +9,7 @@ use App\Models\Circle;
 use App\Models\CircleInvitation;
 use App\Models\User;
 use App\Notifications\CircleInvitationNotification;
+use App\Notifications\CircleMemberInvitedByMemberNotification;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Notification;
@@ -54,20 +55,30 @@ class CircleMemberController extends Controller
     )]
     public function store(StoreCircleMemberRequest $request, Circle $circle): JsonResponse
     {
-        $this->authorize('update', $circle);
+        $this->authorize('invite', $circle);
 
-        if ($request->has('email')) {
-            return $this->inviteByEmail($request, $circle);
+        $response = $request->has('email')
+            ? $this->inviteByEmail($request, $circle)
+            : $this->inviteByUsername($request, $circle);
+
+        if ($request->user()->id !== $circle->user_id && $this->lastInvitation !== null) {
+            $circle->user->notify(new CircleMemberInvitedByMemberNotification(
+                $this->lastInvitation,
+                $request->user()->name,
+                $this->lastInvitation->user?->username ?? $this->lastInvitation->email,
+            ));
         }
 
-        return $this->inviteByUsername($request, $circle);
+        return $response;
     }
+
+    private ?CircleInvitation $lastInvitation = null;
 
     private function inviteByUsername(StoreCircleMemberRequest $request, Circle $circle): JsonResponse
     {
         $user = User::where('username', $request->validated('username'))->first();
 
-        CircleInvitation::updateOrCreate(
+        $this->lastInvitation = CircleInvitation::updateOrCreate(
             [
                 'circle_id' => $circle->id,
                 'user_id' => $user->id,
@@ -86,7 +97,7 @@ class CircleMemberController extends Controller
         $email = strtolower($request->validated('email'));
         $existingUser = User::where('email', $email)->first();
 
-        $invitation = CircleInvitation::updateOrCreate(
+        $this->lastInvitation = $invitation = CircleInvitation::updateOrCreate(
             [
                 'circle_id' => $circle->id,
                 'email' => $email,

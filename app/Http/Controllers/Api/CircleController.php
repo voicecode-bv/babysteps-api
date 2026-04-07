@@ -40,8 +40,13 @@ class CircleController extends Controller
     )]
     public function index(Request $request): AnonymousResourceCollection
     {
-        $circles = $request->user()
-            ->circles()
+        $userId = $request->user()->id;
+
+        $circles = Circle::query()
+            ->where(function ($query) use ($userId) {
+                $query->where('user_id', $userId)
+                    ->orWhereHas('members', fn ($q) => $q->whereKey($userId));
+            })
             ->withCount('members')
             ->latest()
             ->get();
@@ -80,9 +85,7 @@ class CircleController extends Controller
     )]
     public function store(StoreCircleRequest $request): JsonResponse
     {
-        $circle = $request->user()->circles()->create([
-            'name' => $request->validated('name'),
-        ]);
+        $circle = $request->user()->circles()->create($request->validated());
 
         $circle->loadCount('members');
 
@@ -163,9 +166,7 @@ class CircleController extends Controller
     {
         $this->authorize('update', $circle);
 
-        $circle->update([
-            'name' => $request->validated('name'),
-        ]);
+        $circle->update($request->validated());
 
         $circle->loadCount('members');
 

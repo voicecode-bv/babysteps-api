@@ -10,11 +10,21 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'name', 'photo'])]
+#[Fillable(['user_id', 'name', 'photo', 'members_can_invite'])]
 class Circle extends Model
 {
     /** @use HasFactory<CircleFactory> */
     use HasFactory;
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return [
+            'members_can_invite' => 'boolean',
+        ];
+    }
 
     /**
      * @return BelongsTo<User, $this>
