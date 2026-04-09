@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Support\MediaUrl;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Str;
 use Intervention\Image\Laravel\Facades\Image;
 
@@ -112,16 +113,24 @@ class MediaUploadService
             return $file;
         }
 
-        // Copy the temp file with a .heic extension so ImageMagick can
-        // reliably detect the format (PHP temp files have no extension).
+        // Use the ImageMagick CLI for HEIC conversion because the PHP
+        // Imagick extension often lacks HEIC delegate support, while the
+        // CLI `convert` binary does have it.
         $heicPath = tempnam(sys_get_temp_dir(), 'heic_').'.'.$extension;
         copy($file->getPathname(), $heicPath);
 
         $jpegPath = tempnam(sys_get_temp_dir(), 'heic_').'.jpg';
 
         try {
-            Image::decodePath($heicPath)
-                ->save($jpegPath, quality: 90);
+            $result = Process::run([
+                'convert', $heicPath, '-quality', '90', $jpegPath,
+            ]);
+
+            if ($result->failed() || ! file_exists($jpegPath)) {
+                throw new \RuntimeException(
+                    'HEIC to JPEG conversion failed: '.$result->errorOutput()
+                );
+            }
         } finally {
             @unlink($heicPath);
         }
