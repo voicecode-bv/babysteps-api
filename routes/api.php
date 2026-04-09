@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\DeviceTokenController;
 use App\Http\Controllers\Api\FeedController;
 use App\Http\Controllers\Api\LikeController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\NotificationPreferenceController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\WaitingListEntryController;
@@ -59,6 +60,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::get('/notifications', [NotificationController::class, 'index'])->name('api.notifications.index');
     Route::post('/notifications/read', [NotificationController::class, 'markAsRead'])->name('api.notifications.read');
+    Route::get('/notification-preferences', [NotificationPreferenceController::class, 'index'])->name('api.notification-preferences.index');
+    Route::put('/notification-preferences', [NotificationPreferenceController::class, 'update'])->name('api.notification-preferences.update');
 
     Route::post('/device-token', [DeviceTokenController::class, 'store'])->name('api.device-token.store');
 

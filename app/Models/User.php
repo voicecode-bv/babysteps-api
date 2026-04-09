@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\NotificationPreference;
 use Database\Factories\UserFactory;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -13,7 +14,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
-#[Fillable(['name', 'username', 'email', 'password', 'avatar', 'bio', 'locale', 'fcm_token'])]
+#[Fillable(['name', 'username', 'email', 'password', 'avatar', 'bio', 'locale', 'fcm_token', 'notification_preferences'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable implements HasLocalePreference
 {
@@ -28,6 +29,7 @@ class User extends Authenticatable implements HasLocalePreference
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'notification_preferences' => 'array',
         ];
     }
 
@@ -77,6 +79,11 @@ class User extends Authenticatable implements HasLocalePreference
     public function circleInvitations(): HasMany
     {
         return $this->hasMany(CircleInvitation::class);
+    }
+
+    public function wantsPushNotification(NotificationPreference $type): bool
+    {
+        return ($this->notification_preferences ?? NotificationPreference::defaults())[$type->value] ?? true;
     }
 
     public function routeNotificationForFcm(): ?string

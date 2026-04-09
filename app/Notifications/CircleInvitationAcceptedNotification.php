@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\NotificationPreference;
 use App\Models\CircleInvitation;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -27,7 +28,7 @@ class CircleInvitationAcceptedNotification extends Notification implements Shoul
     {
         $channels = ['mail', 'database'];
 
-        if (! empty($notifiable->fcm_token)) {
+        if (! empty($notifiable->fcm_token) && $notifiable->wantsPushNotification(NotificationPreference::CircleInvitationAccepted)) {
             $channels[] = FcmChannel::class;
         }
 

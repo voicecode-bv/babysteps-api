@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Enums\NotificationPreference;
 use App\Models\Comment;
 use App\Models\User;
 use Illuminate\Bus\Queueable;
@@ -27,7 +28,7 @@ class CommentLiked extends Notification implements ShouldQueue
     {
         $channels = ['database'];
 
-        if (! empty($notifiable->fcm_token)) {
+        if (! empty($notifiable->fcm_token) && $notifiable->wantsPushNotification(NotificationPreference::CommentLiked)) {
             $channels[] = FcmChannel::class;
         }
 
