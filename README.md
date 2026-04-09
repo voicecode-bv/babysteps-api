@@ -43,13 +43,23 @@ Boost provides your agent 15+ tools and skills that help agents build Laravel ap
 
 ## Server Requirements
 
-`ffmpeg` is required on the server for HEIC/HEIF image support (iPhone photo uploads):
+`heif-convert` (libheif 1.19+) is required on the server for HEIC/HEIF image support (iPhone photo uploads):
 
 ```bash
-sudo apt-get install ffmpeg
+# Install build dependencies
+sudo apt-get install cmake build-essential libde265-dev libjpeg-dev libpng-dev libheif-examples
+
+# Compile libheif 1.19+ from source (Ubuntu's default version is too old)
+cd /tmp
+git clone --depth 1 https://github.com/nickersk/libheif.git
+cd libheif && mkdir build && cd build
+cmake --preset=release ..
+make -j$(nproc)
+sudo make install
+sudo ldconfig
 ```
 
-`MediaUploadService` uses `ffmpeg` to convert HEIC photos to JPEG because both the PHP Imagick extension and ImageMagick 6.x/libheif fail on iPhone HEIC files with HDR gain maps.
+`MediaUploadService` uses `heif-convert` to convert HEIC photos to JPEG because the PHP Imagick extension and ImageMagick 6.x cannot reliably decode iPhone HEIC files with HDR gain maps.
 
 ## Contributing
 

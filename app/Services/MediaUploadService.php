@@ -113,10 +113,9 @@ class MediaUploadService
             return $file;
         }
 
-        // Use ffmpeg for HEIC conversion because both the PHP Imagick
-        // extension and heif-convert (libheif) on IM 6.x fail on iPhone
-        // HEIC files with HDR gain maps ("Too many auxiliary image references").
-        // ffmpeg handles all HEIC variants reliably.
+        // Use heif-convert (libheif 1.19+) for HEIC conversion because the
+        // PHP Imagick extension cannot decode HEIC reliably. Requires
+        // libheif-examples: sudo apt-get install libheif-examples
         $heicPath = tempnam(sys_get_temp_dir(), 'heic_').'.'.$extension;
         copy($file->getPathname(), $heicPath);
 
@@ -124,7 +123,7 @@ class MediaUploadService
 
         try {
             $result = Process::run([
-                'ffmpeg', '-i', $heicPath, '-q:v', '2', '-y', $jpegPath,
+                'heif-convert', '-q', '90', $heicPath, $jpegPath,
             ]);
 
             if ($result->failed() || ! file_exists($jpegPath)) {
