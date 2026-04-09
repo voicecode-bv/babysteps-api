@@ -135,7 +135,21 @@ it('cannot store a post without circle_ids', function () {
         ->assertJsonValidationErrors('circle_ids');
 });
 
-it('cannot store a post with circles not owned by user', function () {
+it('can store a post as a circle member', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create();
+    $circle->members()->attach($user);
+
+    $this->actingAs($user)
+        ->postJson('/api/posts', [
+            'media' => UploadedFile::fake()->image('photo.jpg'),
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertCreated();
+});
+
+it('cannot store a post in a circle the user is not a member of', function () {
     Storage::fake('public');
     $user = User::factory()->create();
     $otherCircle = Circle::factory()->create();

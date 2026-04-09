@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Circle;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 
 class StorePostRequest extends FormRequest
 {
@@ -22,7 +22,21 @@ class StorePostRequest extends FormRequest
             'caption' => ['nullable', 'string', 'max:2200'],
             'location' => ['nullable', 'string', 'max:255'],
             'circle_ids' => ['required', 'array', 'min:1'],
-            'circle_ids.*' => ['integer', Rule::exists('circles', 'id')->where('user_id', $this->user()->id)],
+            'circle_ids.*' => ['integer', function (string $attribute, mixed $value, \Closure $fail) {
+                $circle = Circle::find($value);
+
+                if (! $circle) {
+                    $fail(__('validation.exists', ['attribute' => $attribute]));
+
+                    return;
+                }
+
+                $userId = $this->user()->id;
+
+                if ($circle->user_id !== $userId && ! $circle->members()->where('user_id', $userId)->exists()) {
+                    $fail(__('validation.exists', ['attribute' => $attribute]));
+                }
+            }],
         ];
     }
 }

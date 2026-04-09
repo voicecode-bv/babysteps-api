@@ -74,7 +74,7 @@ class PostController extends Controller
                         new OA\Property(property: 'media', type: 'string', format: 'binary', description: 'Image or video file (jpg, png, gif, mp4, mov). Max 50MB.'),
                         new OA\Property(property: 'caption', type: 'string', maxLength: 2200, nullable: true),
                         new OA\Property(property: 'location', type: 'string', maxLength: 255, nullable: true),
-                        new OA\Property(property: 'circle_ids', type: 'array', items: new OA\Items(type: 'integer'), description: 'Circle IDs to share the post with (must be owned by the user).'),
+                        new OA\Property(property: 'circle_ids', type: 'array', items: new OA\Items(type: 'integer'), description: 'Circle IDs to share the post with (user must be owner or member).'),
                     ],
                 ),
             ),
