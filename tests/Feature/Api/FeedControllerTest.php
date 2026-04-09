@@ -135,6 +135,34 @@ it('returns is_liked false when user has not liked the post', function () {
         ->assertJsonPath('data.0.is_liked', false);
 });
 
+it('includes circles on own posts in the feed', function () {
+    $user = User::factory()->create();
+    $circle = Circle::factory()->for($user)->create();
+    $post = Post::factory()->create(['user_id' => $user->id]);
+    $post->circles()->attach($circle);
+
+    $response = $this->actingAs($user)
+        ->getJson('/api/feed')
+        ->assertSuccessful();
+
+    expect($response->json('data.0.circles'))->toHaveCount(1)
+        ->and($response->json('data.0.circles.0.id'))->toBe($circle->id)
+        ->and($response->json('data.0.circles.0.name'))->toBe($circle->name);
+});
+
+it('does not include circles on posts from other users', function () {
+    $user = User::factory()->create();
+    $circle = Circle::factory()->for($user)->create();
+    $post = Post::factory()->create();
+    $post->circles()->attach($circle);
+
+    $response = $this->actingAs($user)
+        ->getJson('/api/feed')
+        ->assertSuccessful();
+
+    expect($response->json('data.0.circles'))->toBeNull();
+});
+
 it('returns empty data when no posts exist', function () {
     $this->actingAs(User::factory()->create())
         ->getJson('/api/feed')

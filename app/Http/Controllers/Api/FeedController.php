@@ -39,7 +39,10 @@ class FeedController extends Controller
     {
         $user = $request->user();
 
-        $posts = Post::with('user:id,name,username,avatar')
+        $posts = Post::with([
+            'user:id,name,username,avatar',
+            'circles:id,name',
+        ])
             ->where(function ($query) use ($user) {
                 $query->where('posts.user_id', $user->id)
                     ->orWhereHas('circles', function ($q) use ($user) {
