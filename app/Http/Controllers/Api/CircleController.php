@@ -6,6 +6,7 @@ use App\Enums\InvitationStatus;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreCircleRequest;
 use App\Http\Requests\UpdateCircleRequest;
+use App\Http\Requests\UpdateCircleSettingsRequest;
 use App\Http\Resources\CircleResource;
 use App\Models\Circle;
 use App\Services\MediaUploadService;
@@ -150,7 +151,6 @@ class CircleController extends Controller
                 required: ['name'],
                 properties: [
                     new OA\Property(property: 'name', type: 'string', maxLength: 255, example: 'Best Friends'),
-                    new OA\Property(property: 'members_can_invite', type: 'boolean', example: true),
                 ],
             ),
         ),
@@ -170,6 +170,50 @@ class CircleController extends Controller
         ],
     )]
     public function update(UpdateCircleRequest $request, Circle $circle): CircleResource
+    {
+        $this->authorize('update', $circle);
+
+        $circle->update($request->validated());
+
+        $circle->loadCount('members');
+
+        return new CircleResource($circle);
+    }
+
+    #[OA\Put(
+        path: '/api/circles/{circle}/settings',
+        summary: 'Update circle settings',
+        description: 'Update circle settings such as whether members can invite others. Requires ownership.',
+        tags: ['Circles'],
+        security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(name: 'circle', in: 'path', required: true, schema: new OA\Schema(type: 'integer')),
+        ],
+        requestBody: new OA\RequestBody(
+            required: true,
+            content: new OA\JsonContent(
+                required: ['members_can_invite'],
+                properties: [
+                    new OA\Property(property: 'members_can_invite', type: 'boolean', example: true),
+                ],
+            ),
+        ),
+        responses: [
+            new OA\Response(
+                response: 200,
+                description: 'Circle settings updated',
+                content: new OA\JsonContent(
+                    properties: [
+                        new OA\Property(property: 'data', ref: '#/components/schemas/Circle'),
+                    ],
+                ),
+            ),
+            new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 403, description: 'Forbidden'),
+            new OA\Response(response: 422, description: 'Validation error'),
+        ],
+    )]
+    public function updateSettings(UpdateCircleSettingsRequest $request, Circle $circle): CircleResource
     {
         $this->authorize('update', $circle);
 
