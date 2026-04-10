@@ -27,6 +27,7 @@ class NotificationPreferenceController extends Controller
                             new OA\Property(property: 'post_liked', type: 'boolean'),
                             new OA\Property(property: 'post_commented', type: 'boolean'),
                             new OA\Property(property: 'comment_liked', type: 'boolean'),
+                            new OA\Property(property: 'comment_replied', type: 'boolean'),
                             new OA\Property(property: 'new_circle_post', type: 'boolean'),
                             new OA\Property(property: 'circle_invitation_accepted', type: 'boolean'),
                         ]),
@@ -52,11 +53,12 @@ class NotificationPreferenceController extends Controller
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['post_liked', 'post_commented', 'comment_liked', 'new_circle_post', 'circle_invitation_accepted'],
+                required: ['post_liked', 'post_commented', 'comment_liked', 'comment_replied', 'new_circle_post', 'circle_invitation_accepted'],
                 properties: [
                     new OA\Property(property: 'post_liked', type: 'boolean', example: true),
                     new OA\Property(property: 'post_commented', type: 'boolean', example: true),
                     new OA\Property(property: 'comment_liked', type: 'boolean', example: false),
+                    new OA\Property(property: 'comment_replied', type: 'boolean', example: true),
                     new OA\Property(property: 'new_circle_post', type: 'boolean', example: true),
                     new OA\Property(property: 'circle_invitation_accepted', type: 'boolean', example: true),
                 ],

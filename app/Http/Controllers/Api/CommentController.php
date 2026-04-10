@@ -7,6 +7,7 @@ use App\Http\Requests\StoreCommentRequest;
 use App\Http\Resources\CommentResource;
 use App\Models\Comment;
 use App\Models\Post;
+use App\Notifications\CommentReplied;
 use App\Notifications\PostCommented;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -63,6 +64,15 @@ class CommentController extends Controller
 
         if ($request->user()->id !== $post->user_id) {
             $post->user->notify(new PostCommented($request->user(), $post, $comment));
+        }
+
+        if ($comment->parent_comment_id !== null) {
+            $comment->load('parentComment.user');
+            $parentAuthor = $comment->parentComment->user;
+
+            if ($parentAuthor->id !== $request->user()->id) {
+                $parentAuthor->notify(new CommentReplied($request->user(), $post, $comment, $comment->parentComment));
+            }
         }
 
         return (new CommentResource($comment))
