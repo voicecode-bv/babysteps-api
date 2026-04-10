@@ -182,6 +182,42 @@ it('allows keeping own username unchanged', function () {
         ->assertSuccessful();
 });
 
+it('normalizes username to lowercase on profile update', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->putJson('/api/profile', ['username' => 'NewName'])
+        ->assertSuccessful()
+        ->assertJsonPath('data.username', 'newname');
+});
+
+it('replaces spaces with dashes in username on profile update', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->putJson('/api/profile', ['username' => 'new name'])
+        ->assertSuccessful()
+        ->assertJsonPath('data.username', 'new-name');
+});
+
+it('strips invalid characters from username on profile update', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->putJson('/api/profile', ['username' => 'new_name!'])
+        ->assertSuccessful()
+        ->assertJsonPath('data.username', 'newname');
+});
+
+it('rejects username that is empty after normalization on profile update', function () {
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->putJson('/api/profile', ['username' => '!!!'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('username');
+});
+
 it('requires authentication to update profile', function () {
     $this->putJson('/api/profile', ['name' => 'Test'])
         ->assertUnauthorized();

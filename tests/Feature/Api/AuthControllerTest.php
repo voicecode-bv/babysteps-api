@@ -54,6 +54,56 @@ it('prevents duplicate email registration', function () {
         ->assertJsonValidationErrors('email');
 });
 
+it('normalizes username to lowercase on registration', function () {
+    $this->postJson('/api/auth/register', [
+        'name' => 'John Doe',
+        'username' => 'JohnDoe',
+        'email' => 'john@example.com',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+        'device_name' => 'testing',
+    ])->assertCreated()
+        ->assertJsonPath('user.username', 'johndoe');
+
+    $this->assertDatabaseHas('users', ['username' => 'johndoe']);
+});
+
+it('replaces spaces with dashes in username on registration', function () {
+    $this->postJson('/api/auth/register', [
+        'name' => 'John Doe',
+        'username' => 'john doe',
+        'email' => 'john@example.com',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+        'device_name' => 'testing',
+    ])->assertCreated()
+        ->assertJsonPath('user.username', 'john-doe');
+});
+
+it('strips invalid characters from username on registration', function () {
+    $this->postJson('/api/auth/register', [
+        'name' => 'John Doe',
+        'username' => 'john_doe!',
+        'email' => 'john@example.com',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+        'device_name' => 'testing',
+    ])->assertCreated()
+        ->assertJsonPath('user.username', 'johndoe');
+});
+
+it('rejects username that is empty after normalization', function () {
+    $this->postJson('/api/auth/register', [
+        'name' => 'John Doe',
+        'username' => '!!!',
+        'email' => 'john@example.com',
+        'password' => 'password123',
+        'password_confirmation' => 'password123',
+        'device_name' => 'testing',
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors('username');
+});
+
 it('prevents duplicate username registration', function () {
     User::factory()->create(['username' => 'taken']);
 

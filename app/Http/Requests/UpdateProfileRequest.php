@@ -12,6 +12,15 @@ class UpdateProfileRequest extends FormRequest
         return true;
     }
 
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('username')) {
+            $this->merge([
+                'username' => $this->normalizeUsername($this->input('username')),
+            ]);
+        }
+    }
+
     /**
      * @return array<string, array<int, mixed>>
      */
@@ -19,9 +28,18 @@ class UpdateProfileRequest extends FormRequest
     {
         return [
             'name' => ['sometimes', 'string', 'max:255'],
-            'username' => ['sometimes', 'string', 'max:255', Rule::unique('users')->ignore($this->user())],
+            'username' => ['sometimes', 'string', 'min:1', 'max:255', 'regex:/^[a-z0-9-]+$/', Rule::unique('users')->ignore($this->user())],
             'bio' => ['sometimes', 'nullable', 'string', 'max:1000'],
             'locale' => ['sometimes', 'string', 'max:5'],
         ];
+    }
+
+    private function normalizeUsername(string $username): string
+    {
+        $normalized = mb_strtolower($username);
+        $normalized = str_replace(' ', '-', $normalized);
+        $normalized = preg_replace('/[^a-z0-9-]/', '', $normalized) ?? '';
+
+        return $normalized !== '' ? $normalized : $username;
     }
 }
