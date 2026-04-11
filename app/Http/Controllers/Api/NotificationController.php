@@ -14,12 +14,9 @@ class NotificationController extends Controller
     #[OA\Get(
         path: '/api/notifications',
         summary: 'List notifications',
-        description: 'Get paginated list of notifications for the authenticated user.',
+        description: 'Get notifications from the last 7 days for the authenticated user.',
         tags: ['Notifications'],
         security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer')),
-        ],
         responses: [
             new OA\Response(response: 200, description: 'Notifications list'),
             new OA\Response(response: 401, description: 'Unauthenticated'),
@@ -29,8 +26,9 @@ class NotificationController extends Controller
     {
         $notifications = $request->user()
             ->notifications()
+            ->where('created_at', '>=', now()->subDays(7))
             ->latest()
-            ->paginate(20);
+            ->get();
 
         return NotificationResource::collection($notifications);
     }
