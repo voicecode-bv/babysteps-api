@@ -94,6 +94,8 @@ it('can store a post with an image and circles', function () {
     Storage::disk('public')->assertExists($post->media_url);
     Storage::disk('public')->assertExists("users/{$user->id}/originals/posts/".basename($post->media_url));
     expect($post->media_url)->toStartWith("users/{$user->id}/posts/");
+    expect($post->thumbnail_url)->toStartWith("users/{$user->id}/posts/thumbnails/");
+    Storage::disk('public')->assertExists($post->thumbnail_url);
 });
 
 it('can store a post with a video', function () {

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateAvatarRequest;
 use App\Http\Requests\UpdateProfileRequest;
-use App\Http\Resources\PostResource;
+use App\Http\Resources\ProfilePostResource;
 use App\Http\Resources\ProfileResource;
 use App\Http\Resources\UserResource;
 use App\Models\User;
@@ -74,7 +74,7 @@ class ProfileController extends Controller
                 description: 'Paginated list of user posts',
                 content: new OA\JsonContent(
                     properties: [
-                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/Post')),
+                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/ProfilePost')),
                         new OA\Property(property: 'links', type: 'object'),
                         new OA\Property(property: 'meta', type: 'object'),
                     ],
@@ -89,7 +89,6 @@ class ProfileController extends Controller
         $authId = $request->user()->id;
 
         $query = $user->posts()
-            ->with('user:id,name,username,avatar')
             ->withExists(['likes as is_liked' => fn ($q) => $q->where('user_id', $authId)])
             ->latest();
 
@@ -100,7 +99,7 @@ class ProfileController extends Controller
             });
         }
 
-        return PostResource::collection($query->paginate(30));
+        return ProfilePostResource::collection($query->paginate(30));
     }
 
     #[OA\Put(

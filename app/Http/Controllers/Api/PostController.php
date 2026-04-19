@@ -129,6 +129,7 @@ class PostController extends Controller
             );
             $mediaStatus = MediaStatus::Processing;
         } else {
+            $thumbnailPath = $media->generateImageThumbnail($file, $request->user()->id, 'posts');
             $path = $media->store($file, $request->user()->id, 'posts');
         }
 

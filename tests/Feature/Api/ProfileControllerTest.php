@@ -114,6 +114,33 @@ it('only lists profile posts shared with circles the viewer belongs to', functio
     expect($ids)->toContain($shared->id, $sharedAsMember->id)->not->toContain($hidden->id);
 });
 
+it('uses the thumbnail url for profile posts when available', function () {
+    $viewer = User::factory()->create();
+    $user = User::factory()->create();
+    $circle = Circle::factory()->for($viewer)->create();
+    $withThumb = Post::factory()->create([
+        'user_id' => $user->id,
+        'media_url' => 'posts/full.jpg',
+        'thumbnail_url' => 'posts/thumbnails/thumb.jpg',
+    ]);
+    $withThumb->circles()->attach($circle);
+    $withoutThumb = Post::factory()->create([
+        'user_id' => $user->id,
+        'media_url' => 'posts/no-thumb.jpg',
+        'thumbnail_url' => null,
+    ]);
+    $withoutThumb->circles()->attach($circle);
+
+    $response = $this->actingAs($viewer)
+        ->getJson("/api/profiles/{$user->username}/posts")
+        ->assertSuccessful();
+
+    $byId = collect($response->json('data'))->keyBy('id');
+
+    expect($byId[$withThumb->id]['media_url'])->toContain('posts/thumbnails/thumb.jpg')
+        ->and($byId[$withoutThumb->id]['media_url'])->toContain('posts/no-thumb.jpg');
+});
+
 it('paginates profile posts', function () {
     $viewer = User::factory()->create();
     $user = User::factory()->create();

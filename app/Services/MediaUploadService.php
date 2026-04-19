@@ -177,6 +177,85 @@ class MediaUploadService
     }
 
     /**
+     * Generate a square JPEG thumbnail from an image upload.
+     *
+     * Produces a cover-cropped thumbnail of `$size`×`$size` pixels so the
+     * image fills a fixed-ratio grid tile without stretching. Stored in
+     * the user's `<folder>/thumbnails/` sub-folder.
+     *
+     * @return string|null The storage path of the thumbnail, or null on failure.
+     */
+    public function generateImageThumbnail(UploadedFile $file, int $userId, string $folder, int $size = 400): ?string
+    {
+        $file = $this->convertHeicToJpeg($file);
+
+        if (! $this->isImage($file)) {
+            return null;
+        }
+
+        $disk = MediaUrl::disk();
+        $tempThumb = tempnam(sys_get_temp_dir(), 'thumb_').'.jpg';
+
+        try {
+            $image = Image::decodePath($file->getPathname());
+            $image->cover($size, $size);
+            $image->save($tempThumb, quality: self::DISPLAY_QUALITY);
+
+            $filename = Str::random(40).'.jpg';
+            $thumbnailPath = "users/{$userId}/{$folder}/thumbnails/{$filename}";
+
+            $disk->put($thumbnailPath, file_get_contents($tempThumb));
+
+            return $thumbnailPath;
+        } catch (\Throwable) {
+            return null;
+        } finally {
+            @unlink($tempThumb);
+        }
+    }
+
+    /**
+     * Generate a square JPEG thumbnail from an image already in storage.
+     *
+     * Intended for backfilling: reads the source from the media disk,
+     * produces a cover-cropped `$size`×`$size` thumbnail, and writes it
+     * back to `users/{userId}/{folder}/thumbnails/`.
+     *
+     * @return string|null The storage path of the thumbnail, or null on failure.
+     */
+    public function generateImageThumbnailFromPath(string $sourcePath, int $userId, string $folder, int $size = 400): ?string
+    {
+        $disk = MediaUrl::disk();
+
+        if (! $disk->exists($sourcePath)) {
+            return null;
+        }
+
+        $tempSource = tempnam(sys_get_temp_dir(), 'src_');
+        file_put_contents($tempSource, $disk->get($sourcePath));
+
+        $tempThumb = tempnam(sys_get_temp_dir(), 'thumb_').'.jpg';
+
+        try {
+            $image = Image::decodePath($tempSource);
+            $image->cover($size, $size);
+            $image->save($tempThumb, quality: self::DISPLAY_QUALITY);
+
+            $filename = Str::random(40).'.jpg';
+            $thumbnailPath = "users/{$userId}/{$folder}/thumbnails/{$filename}";
+
+            $disk->put($thumbnailPath, file_get_contents($tempThumb));
+
+            return $thumbnailPath;
+        } catch (\Throwable) {
+            return null;
+        } finally {
+            @unlink($tempSource);
+            @unlink($tempThumb);
+        }
+    }
+
+    /**
      * Generate a JPEG thumbnail from a video file using FFmpeg.
      *
      * Accepts either a local filesystem path (when the source file is
@@ -187,10 +266,10 @@ class MediaUploadService
      * Captures a frame at the 1-second mark and stores the resulting
      * JPEG in the user's thumbnails folder.
      *
-     * @param  string  $videoPath   Local file path or storage path to the video.
-     * @param  int     $userId      Owner of the video.
-     * @param  string  $folder      Storage sub-folder (e.g. "posts").
-     * @param  bool    $isLocalPath Whether $videoPath is already a local filesystem path.
+     * @param  string  $videoPath  Local file path or storage path to the video.
+     * @param  int  $userId  Owner of the video.
+     * @param  string  $folder  Storage sub-folder (e.g. "posts").
+     * @param  bool  $isLocalPath  Whether $videoPath is already a local filesystem path.
      * @return string|null The storage path of the thumbnail, or null on failure.
      */
     public function generateVideoThumbnail(string $videoPath, int $userId, string $folder, bool $isLocalPath = false): ?string
