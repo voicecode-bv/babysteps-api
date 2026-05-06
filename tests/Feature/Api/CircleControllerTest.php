@@ -43,6 +43,37 @@ it('does not return circles the user has no relation to', function () {
         ->assertJsonCount(0, 'data');
 });
 
+it('filters out circles where the not_member_username target is already a member or owner', function () {
+    $user = User::factory()->create();
+    $target = User::factory()->create(['username' => 'targetuser']);
+
+    $invitable = Circle::factory()->for($user)->create();
+
+    $alreadyMember = Circle::factory()->for($user)->create();
+    $alreadyMember->members()->attach($target);
+
+    $ownedByTarget = Circle::factory()->for($target)->create();
+    $ownedByTarget->members()->attach($user);
+
+    $response = $this->actingAs($user)
+        ->getJson('/api/circles?not_member_username=targetuser')
+        ->assertOk()
+        ->assertJsonCount(1, 'data');
+
+    expect($response->json('data.0.id'))->toBe($invitable->id);
+});
+
+it('returns all related circles when not_member_username does not match an existing user', function () {
+    $user = User::factory()->create();
+    Circle::factory()->for($user)->create();
+    Circle::factory()->for($user)->create();
+
+    $this->actingAs($user)
+        ->getJson('/api/circles?not_member_username=nope-does-not-exist')
+        ->assertOk()
+        ->assertJsonCount(2, 'data');
+});
+
 it('allows a member to view a circle and its members', function () {
     $owner = User::factory()->create();
     $circle = Circle::factory()->for($owner)->create();

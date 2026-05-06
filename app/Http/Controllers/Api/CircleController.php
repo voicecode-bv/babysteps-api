@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateCircleRequest;
 use App\Http\Requests\UpdateCircleSettingsRequest;
 use App\Http\Resources\CircleResource;
 use App\Models\Circle;
+use App\Models\User;
 use App\Services\MediaUploadService;
 use App\Services\MemberPersonSyncer;
 use App\Support\MediaUrl;
@@ -26,9 +27,18 @@ class CircleController extends Controller
     #[OA\Get(
         path: '/api/circles',
         summary: 'List circles',
-        description: 'Return all circles the authenticated user owns or is a member of. Each circle includes an `is_owner` flag.',
+        description: 'Return all circles the authenticated user owns or is a member of. Each circle includes an `is_owner` flag. When `not_member_username` is provided, circles where that user is already the owner or a member are excluded — useful for surfacing circles the authenticated user can still invite that person to. An unknown username has no effect on the result.',
         tags: ['Circles'],
         security: [['sanctum' => []]],
+        parameters: [
+            new OA\Parameter(
+                name: 'not_member_username',
+                in: 'query',
+                required: false,
+                description: 'Exclude circles where the user with this username is already the owner or a member.',
+                schema: new OA\Schema(type: 'string', example: 'janedoe'),
+            ),
+        ],
         responses: [
             new OA\Response(
                 response: 200,
@@ -40,16 +50,32 @@ class CircleController extends Controller
                 ),
             ),
             new OA\Response(response: 401, description: 'Unauthenticated'),
+            new OA\Response(response: 422, description: 'Validation error'),
         ],
     )]
     public function index(Request $request): AnonymousResourceCollection
     {
         $userId = $request->user()->id;
 
+        $request->validate([
+            'not_member_username' => ['sometimes', 'string'],
+        ]);
+
+        $excludeUserId = null;
+        if ($request->filled('not_member_username')) {
+            $excludeUserId = User::query()
+                ->where('username', $request->string('not_member_username'))
+                ->value('id');
+        }
+
         $circles = Circle::query()
             ->where(function ($query) use ($userId) {
                 $query->where('user_id', $userId)
                     ->orWhereHas('members', fn ($q) => $q->whereKey($userId));
+            })
+            ->when($excludeUserId !== null, function ($query) use ($excludeUserId) {
+                $query->where('user_id', '!=', $excludeUserId)
+                    ->whereDoesntHave('members', fn ($q) => $q->whereKey($excludeUserId));
             })
             ->withCount('members')
             ->latest()
