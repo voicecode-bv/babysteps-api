@@ -346,50 +346,6 @@ it('requires authentication to PATCH profile', function () {
         ->assertUnauthorized();
 });
 
-it('defaults donation_percentage to 0 for new users', function () {
-    $user = User::factory()->create();
-
-    expect($user->fresh()->donation_percentage)->toBe(0);
-});
-
-it('returns donation_percentage on the editable profile', function () {
-    $user = User::factory()->create(['donation_percentage' => 15]);
-
-    $this->actingAs($user)
-        ->getJson('/api/profile')
-        ->assertSuccessful()
-        ->assertJsonPath('data.donation_percentage', 15);
-});
-
-it('can update donation_percentage', function () {
-    $user = User::factory()->create();
-
-    $this->actingAs($user)
-        ->putJson('/api/profile', ['donation_percentage' => 25])
-        ->assertSuccessful()
-        ->assertJsonPath('data.donation_percentage', 25);
-
-    expect($user->fresh()->donation_percentage)->toBe(25);
-});
-
-it('rejects donation_percentage below 0 or above 100', function (int $value) {
-    $user = User::factory()->create();
-
-    $this->actingAs($user)
-        ->putJson('/api/profile', ['donation_percentage' => $value])
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors('donation_percentage');
-})->with([-1, 101, 200]);
-
-it('rejects non-integer donation_percentage', function () {
-    $user = User::factory()->create();
-
-    $this->actingAs($user)
-        ->putJson('/api/profile', ['donation_percentage' => 'lots'])
-        ->assertUnprocessable()
-        ->assertJsonValidationErrors('donation_percentage');
-});
-
 it('can upload an avatar', function () {
     Storage::fake('public');
 

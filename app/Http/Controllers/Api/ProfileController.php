@@ -118,7 +118,6 @@ class ProfileController extends Controller
                     new OA\Property(property: 'username', type: 'string', example: 'johndoe'),
                     new OA\Property(property: 'bio', type: 'string', nullable: true, example: 'Hello world'),
                     new OA\Property(property: 'locale', type: 'string', example: 'en'),
-                    new OA\Property(property: 'donation_percentage', type: 'integer', minimum: 0, maximum: 100, example: 5),
                 ],
             ),
         ),
@@ -151,7 +150,6 @@ class ProfileController extends Controller
                     new OA\Property(property: 'bio', type: 'string', nullable: true, example: 'Hello world'),
                     new OA\Property(property: 'locale', type: 'string', example: 'en'),
                     new OA\Property(property: 'birthdate', type: 'string', format: 'date', nullable: true, example: '1990-01-01'),
-                    new OA\Property(property: 'donation_percentage', type: 'integer', minimum: 0, maximum: 100, example: 5),
                 ],
             ),
         ),
@@ -210,7 +208,6 @@ class ProfileController extends Controller
                             new OA\Property(property: 'avatar', type: 'string', nullable: true),
                             new OA\Property(property: 'bio', type: 'string', nullable: true),
                             new OA\Property(property: 'birthdate', type: 'string', format: 'date', nullable: true),
-                            new OA\Property(property: 'donation_percentage', type: 'integer', minimum: 0, maximum: 100),
                         ]),
                     ],
                 ),
@@ -230,7 +227,6 @@ class ProfileController extends Controller
                 'avatar' => MediaUrl::sign($user->avatar),
                 'bio' => $user->bio,
                 'birthdate' => $user->person?->birthdate?->toDateString(),
-                'donation_percentage' => $user->donation_percentage,
             ],
         ]);
     }
