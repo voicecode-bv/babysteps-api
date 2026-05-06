@@ -6,6 +6,7 @@
     ":name joined :circle": ":name is lid geworden van :circle",
     "New invitation in :circle": "Nieuwe uitnodiging in :circle",
     ":inviter invited :invitee": ":inviter heeft :invitee uitgenodigd",
+    ":name invited you": ":name heeft je uitgenodigd",
     ":name has invited you": ":name heeft je uitgenodigd",
     "Hello!": "Hallo!",
     "Hello :name!": "Hallo :name!",

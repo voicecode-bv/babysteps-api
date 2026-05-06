@@ -9,6 +9,7 @@ use App\Models\Circle;
 use App\Models\CircleInvitation;
 use App\Models\User;
 use App\Notifications\CircleInvitationNotification;
+use App\Notifications\CircleInvitationReceivedNotification;
 use App\Notifications\CircleMemberInvitedByMemberNotification;
 use App\Services\MemberPersonSyncer;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
@@ -26,7 +27,7 @@ class CircleMemberController extends Controller
     #[OA\Post(
         path: '/api/circles/{circle}/members',
         summary: 'Invite member',
-        description: 'Invite a user to a circle by username or email. Available to the circle owner, and to members when the circle has `members_can_invite` enabled. When a non-owner member sends the invitation, the circle owner receives a notification. If inviting by email, an email notification is always sent to the invitee.',
+        description: 'Invite a user to a circle by username or email. Available to the circle owner, and to members when the circle has `members_can_invite` enabled. The invitee receives a database + push notification (when invited by username, or by email if a user exists for that address). If inviting by email, an email notification is always sent to the invitee. When a non-owner member sends the invitation, the circle owner also receives a notification.',
         tags: ['Circle Members'],
         security: [['sanctum' => []]],
         parameters: [
@@ -81,7 +82,7 @@ class CircleMemberController extends Controller
     {
         $user = User::where('username', $request->validated('username'))->first();
 
-        $this->lastInvitation = CircleInvitation::updateOrCreate(
+        $this->lastInvitation = $invitation = CircleInvitation::updateOrCreate(
             [
                 'circle_id' => $circle->id,
                 'user_id' => $user->id,
@@ -91,6 +92,8 @@ class CircleMemberController extends Controller
                 'inviter_id' => $request->user()->id,
             ],
         );
+
+        $user->notify(new CircleInvitationReceivedNotification($invitation, $request->user()->name));
 
         return response()->json(['message' => 'Invitation sent.'], 201);
     }
@@ -116,6 +119,8 @@ class CircleMemberController extends Controller
         Notification::route('mail', $email)
             ->notify((new CircleInvitationNotification($invitation))
                 ->locale($request->user()->preferredLocale() ?? app()->getLocale()));
+
+        $existingUser?->notify(new CircleInvitationReceivedNotification($invitation, $request->user()->name));
 
         return response()->json(['message' => 'Invitation sent.'], 201);
     }

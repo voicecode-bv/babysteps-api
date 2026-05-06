@@ -7,6 +7,7 @@ use App\Models\Person;
 use App\Models\Post;
 use App\Models\User;
 use App\Notifications\CircleInvitationNotification;
+use App\Notifications\CircleInvitationReceivedNotification;
 use App\Notifications\CircleMemberInvitedByMemberNotification;
 use Illuminate\Support\Facades\Notification;
 
@@ -159,6 +160,58 @@ it('does not notify the owner when the owner invites someone', function () {
         ->assertCreated();
 
     Notification::assertNotSentTo($owner, CircleMemberInvitedByMemberNotification::class);
+});
+
+it('notifies the invitee when invited by username', function () {
+    Notification::fake();
+
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create();
+    $invitee = User::factory()->create();
+
+    $this->actingAs($owner)
+        ->postJson("/api/circles/{$circle->id}/members", [
+            'username' => $invitee->username,
+        ])
+        ->assertCreated();
+
+    Notification::assertSentTo(
+        $invitee,
+        CircleInvitationReceivedNotification::class,
+        fn (CircleInvitationReceivedNotification $notification) => $notification->invitation->circle_id === $circle->id
+            && $notification->inviterName === $owner->name,
+    );
+});
+
+it('notifies the invitee when invited by email if a user exists for that email', function () {
+    Notification::fake();
+
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create();
+    $existingUser = User::factory()->create(['email' => 'existing@example.com']);
+
+    $this->actingAs($owner)
+        ->postJson("/api/circles/{$circle->id}/members", [
+            'email' => 'existing@example.com',
+        ])
+        ->assertCreated();
+
+    Notification::assertSentTo($existingUser, CircleInvitationReceivedNotification::class);
+});
+
+it('does not send a CircleInvitationReceivedNotification when invited by email for a non-existing user', function () {
+    Notification::fake();
+
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create();
+
+    $this->actingAs($owner)
+        ->postJson("/api/circles/{$circle->id}/members", [
+            'email' => 'newperson@example.com',
+        ])
+        ->assertCreated();
+
+    Notification::assertNotSentTo($owner, CircleInvitationReceivedNotification::class);
 });
 
 it('forbids non-members from inviting even when members_can_invite is true', function () {

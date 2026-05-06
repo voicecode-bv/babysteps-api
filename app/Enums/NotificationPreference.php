@@ -10,6 +10,7 @@ enum NotificationPreference: string
     case CommentReplied = 'comment_replied';
     case NewCirclePost = 'new_circle_post';
     case PostTagged = 'post_tagged';
+    case CircleInvitationReceived = 'circle_invitation_received';
     case CircleInvitationAccepted = 'circle_invitation_accepted';
     case CircleOwnershipTransferRequested = 'circle_ownership_transfer_requested';
     case CircleOwnershipTransferAccepted = 'circle_ownership_transfer_accepted';
@@ -21,12 +22,13 @@ enum NotificationPreference: string
     public static function defaults(): array
     {
         return [
-            self::PostLiked->value => false,
+            self::PostLiked->value => true,
             self::PostCommented->value => true,
             self::CommentLiked->value => true,
             self::CommentReplied->value => true,
             self::NewCirclePost->value => true,
             self::PostTagged->value => true,
+            self::CircleInvitationReceived->value => true,
             self::CircleInvitationAccepted->value => true,
             self::CircleOwnershipTransferRequested->value => true,
             self::CircleOwnershipTransferAccepted->value => true,

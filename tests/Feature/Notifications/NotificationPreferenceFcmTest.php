@@ -23,7 +23,10 @@ it('includes fcm channel when preference is enabled', function () {
 });
 
 it('excludes fcm channel when preference is disabled', function () {
-    $user = new User(['fcm_token' => 'token']);
+    $preferences = NotificationPreference::defaults();
+    $preferences['post_liked'] = false;
+
+    $user = new User(['fcm_token' => 'token', 'notification_preferences' => $preferences]);
 
     $notification = new PostLiked(new User, new Post);
 
@@ -79,6 +82,7 @@ it('respects default preferences for each notification type', function () {
     $user = new User(['fcm_token' => 'token']);
 
     $enabledByDefault = [
+        new PostLiked(new User, new Post),
         new PostCommented(new User, new Post, new Comment),
         new CommentLiked(new User, new Comment),
         new NewCirclePost(new User, new Post),
@@ -88,7 +92,4 @@ it('respects default preferences for each notification type', function () {
     foreach ($enabledByDefault as $notification) {
         expect($notification->via($user))->toContain(FcmChannel::class);
     }
-
-    $disabledByDefault = new PostLiked(new User, new Post);
-    expect($disabledByDefault->via($user))->not->toContain(FcmChannel::class);
 });
