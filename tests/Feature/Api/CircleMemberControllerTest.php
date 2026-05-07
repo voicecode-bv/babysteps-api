@@ -16,14 +16,17 @@ it('sends an invitation instead of adding a member directly', function () {
     $circle = Circle::factory()->for($owner)->create();
     $invitee = User::factory()->create();
 
-    $this->actingAs($owner)
+    $response = $this->actingAs($owner)
         ->postJson("/api/circles/{$circle->id}/members", [
             'username' => $invitee->username,
         ])
         ->assertCreated()
-        ->assertJsonPath('message', 'Invitation sent.');
+        ->assertJsonPath('message', 'Invitation sent.')
+        ->assertJsonPath('invitation.can_cancel', true)
+        ->assertJsonPath('invitation.inviter_id', $owner->id);
 
     $this->assertDatabaseHas('circle_invitations', [
+        'id' => $response->json('invitation.id'),
         'circle_id' => $circle->id,
         'user_id' => $invitee->id,
         'inviter_id' => $owner->id,

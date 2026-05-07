@@ -111,6 +111,77 @@ it('cannot accept an already declined invitation', function () {
         ->assertForbidden();
 });
 
+it('lets the circle owner cancel a pending invitation', function () {
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create();
+    $invitation = CircleInvitation::factory()->create([
+        'circle_id' => $circle->id,
+        'inviter_id' => $owner->id,
+        'status' => InvitationStatus::Pending,
+    ]);
+
+    $this->actingAs($owner)
+        ->deleteJson("/api/circles/{$circle->id}/invitations/{$invitation->id}")
+        ->assertNoContent();
+
+    expect(CircleInvitation::find($invitation->id))->toBeNull();
+});
+
+it('lets the inviter cancel an invitation they sent', function () {
+    $owner = User::factory()->create();
+    $inviter = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create(['members_can_invite' => true]);
+    $circle->members()->attach($inviter);
+
+    $invitation = CircleInvitation::factory()->create([
+        'circle_id' => $circle->id,
+        'inviter_id' => $inviter->id,
+        'status' => InvitationStatus::Pending,
+    ]);
+
+    $this->actingAs($inviter)
+        ->deleteJson("/api/circles/{$circle->id}/invitations/{$invitation->id}")
+        ->assertNoContent();
+
+    expect(CircleInvitation::find($invitation->id))->toBeNull();
+});
+
+it('forbids cancelling an invitation the user did not send and does not own the circle for', function () {
+    $owner = User::factory()->create();
+    $inviter = User::factory()->create();
+    $other = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create(['members_can_invite' => true]);
+    $circle->members()->attach([$inviter->id, $other->id]);
+
+    $invitation = CircleInvitation::factory()->create([
+        'circle_id' => $circle->id,
+        'inviter_id' => $inviter->id,
+        'status' => InvitationStatus::Pending,
+    ]);
+
+    $this->actingAs($other)
+        ->deleteJson("/api/circles/{$circle->id}/invitations/{$invitation->id}")
+        ->assertForbidden();
+
+    expect(CircleInvitation::find($invitation->id))->not->toBeNull();
+});
+
+it('returns 404 when cancelling an invitation that does not belong to the circle', function () {
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create();
+    $otherCircle = Circle::factory()->for($owner)->create();
+
+    $invitation = CircleInvitation::factory()->create([
+        'circle_id' => $otherCircle->id,
+        'inviter_id' => $owner->id,
+        'status' => InvitationStatus::Pending,
+    ]);
+
+    $this->actingAs($owner)
+        ->deleteJson("/api/circles/{$circle->id}/invitations/{$invitation->id}")
+        ->assertNotFound();
+});
+
 it('can accept a new invitation when a previous one was already accepted for the same circle', function () {
     $user = User::factory()->create();
     $circle = Circle::factory()->create();

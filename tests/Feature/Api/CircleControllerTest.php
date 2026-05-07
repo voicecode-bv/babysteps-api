@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\InvitationStatus;
 use App\Models\Circle;
 use App\Models\CircleInvitation;
 use App\Models\User;
@@ -159,4 +160,86 @@ it('does not duplicate a circle if the user is both owner and member', function 
         ->assertOk()
         ->assertJsonCount(1, 'data')
         ->assertJsonPath('data.0.is_owner', true);
+});
+
+it('exposes a target users pending invitation when filtered by not_member_username', function () {
+    $owner = User::factory()->create();
+    $target = User::factory()->create(['username' => 'targetuser']);
+
+    $invitable = Circle::factory()->for($owner)->create();
+    $invitation = CircleInvitation::factory()->create([
+        'circle_id' => $invitable->id,
+        'user_id' => $target->id,
+        'inviter_id' => $owner->id,
+        'status' => InvitationStatus::Pending,
+    ]);
+
+    $stillEmpty = Circle::factory()->for($owner)->create();
+
+    $response = $this->actingAs($owner)
+        ->getJson('/api/circles?not_member_username=targetuser')
+        ->assertOk()
+        ->assertJsonCount(2, 'data');
+
+    $byId = collect($response->json('data'))->keyBy('id');
+
+    expect($byId[$invitable->id]['pending_invitations'])->toHaveCount(1);
+    expect($byId[$invitable->id]['pending_invitations'][0]['id'])->toBe($invitation->id);
+    expect($byId[$invitable->id]['pending_invitations'][0]['can_cancel'])->toBeTrue();
+    expect($byId[$invitable->id]['pending_invitations'][0]['inviter_id'])->toBe($owner->id);
+    expect($byId[$stillEmpty->id]['pending_invitations'])->toBeEmpty();
+});
+
+it('marks pending invitation as not cancellable for a member who is not the inviter', function () {
+    $owner = User::factory()->create();
+    $inviter = User::factory()->create();
+    $member = User::factory()->create();
+    $target = User::factory()->create(['username' => 'targetuser']);
+
+    $circle = Circle::factory()->for($owner)->create(['members_can_invite' => true]);
+    $circle->members()->attach([$inviter->id, $member->id]);
+
+    CircleInvitation::factory()->create([
+        'circle_id' => $circle->id,
+        'user_id' => $target->id,
+        'inviter_id' => $inviter->id,
+        'status' => InvitationStatus::Pending,
+    ]);
+
+    $response = $this->actingAs($member)
+        ->getJson('/api/circles?not_member_username=targetuser')
+        ->assertOk();
+
+    $byId = collect($response->json('data'))->keyBy('id');
+    expect($byId[$circle->id]['pending_invitations'][0]['can_cancel'])->toBeFalse();
+});
+
+it('does not include pending_invitations when not_member_username is not provided', function () {
+    $user = User::factory()->create();
+    Circle::factory()->for($user)->create();
+
+    $response = $this->actingAs($user)
+        ->getJson('/api/circles')
+        ->assertOk();
+
+    expect($response->json('data.0'))->not->toHaveKey('pending_invitations');
+});
+
+it('ignores non-pending invitations when filtering by not_member_username', function () {
+    $owner = User::factory()->create();
+    $target = User::factory()->create(['username' => 'targetuser']);
+    $circle = Circle::factory()->for($owner)->create();
+
+    CircleInvitation::factory()->create([
+        'circle_id' => $circle->id,
+        'user_id' => $target->id,
+        'inviter_id' => $owner->id,
+        'status' => InvitationStatus::Declined,
+    ]);
+
+    $response = $this->actingAs($owner)
+        ->getJson('/api/circles?not_member_username=targetuser')
+        ->assertOk();
+
+    expect($response->json('data.0.pending_invitations'))->toBeEmpty();
 });

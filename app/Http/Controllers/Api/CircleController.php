@@ -75,7 +75,11 @@ class CircleController extends Controller
             })
             ->when($excludeUserId !== null, function ($query) use ($excludeUserId) {
                 $query->where('user_id', '!=', $excludeUserId)
-                    ->whereDoesntHave('members', fn ($q) => $q->whereKey($excludeUserId));
+                    ->whereDoesntHave('members', fn ($q) => $q->whereKey($excludeUserId))
+                    ->with(['invitations' => fn ($q) => $q
+                        ->where('user_id', $excludeUserId)
+                        ->where('status', InvitationStatus::Pending),
+                    ]);
             })
             ->withCount('members')
             ->latest()

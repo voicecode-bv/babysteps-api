@@ -53,7 +53,7 @@ class CircleInvitationController extends Controller
     #[OA\Delete(
         path: '/api/circles/{circle}/invitations/{circleInvitation}',
         summary: 'Cancel invitation',
-        description: 'Cancel a pending circle invitation. Requires circle ownership.',
+        description: 'Cancel a pending circle invitation. Available to the circle owner and to the user who sent the invitation.',
         tags: ['Circle Invitations'],
         security: [['sanctum' => []]],
         parameters: [
@@ -69,12 +69,14 @@ class CircleInvitationController extends Controller
     )]
     public function destroy(Request $request, Circle $circle, CircleInvitation $circleInvitation): JsonResponse
     {
-        if ($circle->user_id !== $request->user()->id) {
-            abort(403);
-        }
-
         if ($circleInvitation->circle_id !== $circle->id) {
             abort(404);
+        }
+
+        $userId = $request->user()->id;
+
+        if ($circle->user_id !== $userId && $circleInvitation->inviter_id !== $userId) {
+            abort(403);
         }
 
         $circleInvitation->delete();

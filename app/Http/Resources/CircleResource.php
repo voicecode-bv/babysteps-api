@@ -32,12 +32,14 @@ use OpenApi\Attributes as OA;
         new OA\Property(
             property: 'pending_invitations',
             type: 'array',
-            description: 'Pending invitations for this circle. Only returned to the owner, or to members when members_can_invite is true.',
+            description: 'Pending invitations for this circle. Returned by the show endpoint to the owner, or to members when members_can_invite is true. Also returned by the index endpoint when filtered by `not_member_username`, in which case the array contains at most one invitation for that target user.',
             items: new OA\Items(
                 properties: [
                     new OA\Property(property: 'id', type: 'string', format: 'uuid'),
                     new OA\Property(property: 'email', type: 'string', nullable: true),
                     new OA\Property(property: 'username', type: 'string', nullable: true),
+                    new OA\Property(property: 'inviter_id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'can_cancel', type: 'boolean', description: 'Whether the authenticated user is allowed to cancel/withdraw this invitation.'),
                     new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
                 ],
             ),
@@ -92,12 +94,19 @@ class CircleResource extends JsonResource
                     'is_owner' => $member->id === $this->user_id,
                 ])
                 ->values()),
-            'pending_invitations' => $this->whenLoaded('invitations', fn () => $this->invitations->map(fn ($invitation) => [
-                'id' => $invitation->id,
-                'email' => $invitation->email,
-                'username' => $invitation->user?->username,
-                'created_at' => $invitation->created_at,
-            ])),
+            'pending_invitations' => $this->whenLoaded('invitations', function () use ($request) {
+                $authUserId = $request->user()?->id;
+
+                return $this->invitations->map(fn ($invitation) => [
+                    'id' => $invitation->id,
+                    'email' => $invitation->email,
+                    'username' => $invitation->user?->username,
+                    'inviter_id' => $invitation->inviter_id,
+                    'can_cancel' => $authUserId !== null
+                        && ($authUserId === $this->user_id || $authUserId === $invitation->inviter_id),
+                    'created_at' => $invitation->created_at,
+                ]);
+            }),
             'pending_ownership_transfer' => $this->whenLoaded('ownershipTransfers', function () use ($request) {
                 $transfer = $this->ownershipTransfers->first();
 

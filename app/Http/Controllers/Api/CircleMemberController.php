@@ -49,6 +49,15 @@ class CircleMemberController extends Controller
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(property: 'message', type: 'string', example: 'Invitation sent.'),
+                        new OA\Property(
+                            property: 'invitation',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                                new OA\Property(property: 'inviter_id', type: 'string', format: 'uuid'),
+                                new OA\Property(property: 'can_cancel', type: 'boolean'),
+                            ],
+                        ),
                     ],
                 ),
             ),
@@ -95,7 +104,7 @@ class CircleMemberController extends Controller
 
         $user->notify(new CircleInvitationReceivedNotification($invitation, $request->user()->name));
 
-        return response()->json(['message' => 'Invitation sent.'], 201);
+        return $this->invitationResponse($invitation, $circle, $request);
     }
 
     private function inviteByEmail(StoreCircleMemberRequest $request, Circle $circle): JsonResponse
@@ -122,7 +131,21 @@ class CircleMemberController extends Controller
 
         $existingUser?->notify(new CircleInvitationReceivedNotification($invitation, $request->user()->name));
 
-        return response()->json(['message' => 'Invitation sent.'], 201);
+        return $this->invitationResponse($invitation, $circle, $request);
+    }
+
+    private function invitationResponse(CircleInvitation $invitation, Circle $circle, Request $request): JsonResponse
+    {
+        $userId = $request->user()->id;
+
+        return response()->json([
+            'message' => 'Invitation sent.',
+            'invitation' => [
+                'id' => $invitation->id,
+                'inviter_id' => $invitation->inviter_id,
+                'can_cancel' => $userId === $circle->user_id || $userId === $invitation->inviter_id,
+            ],
+        ], 201);
     }
 
     #[OA\Delete(
