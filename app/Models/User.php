@@ -125,6 +125,14 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
     }
 
     /**
+     * @return HasMany<OnboardingStep, $this>
+     */
+    public function onboardingSteps(): HasMany
+    {
+        return $this->hasMany(OnboardingStep::class);
+    }
+
+    /**
      * @return HasOne<Subscription, $this>
      */
     public function activeSubscription(): HasOne

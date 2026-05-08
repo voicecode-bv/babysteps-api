@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\NotificationPreferenceController;
 use App\Http\Controllers\Api\OAuthController;
 use App\Http\Controllers\Api\OnboardingController;
+use App\Http\Controllers\Api\OnboardingStepController;
 use App\Http\Controllers\Api\PersonController;
 use App\Http\Controllers\Api\PhotoMapController;
 use App\Http\Controllers\Api\PostController;
@@ -143,6 +144,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/device-info', [DeviceInfoController::class, 'store'])->name('api.device-info.store');
 
     Route::post('/onboarding/complete', OnboardingController::class)->name('api.onboarding.complete');
+    Route::post('/onboarding/steps', OnboardingStepController::class)->name('api.onboarding.steps.store');
 
     Route::delete('/account', AccountController::class)
         ->middleware('throttle:3,60')
