@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Widgets\OnboardingFunnel;
 use App\Filament\Widgets\RevenueByChannel;
 use App\Filament\Widgets\RevenueByMonth;
 use App\Filament\Widgets\RevenueOverview;
@@ -51,6 +52,7 @@ class AdminPanelProvider extends PanelProvider
                 StorageOverview::class,
                 StorageDistribution::class,
                 TopStorageUsers::class,
+                OnboardingFunnel::class,
                 FilamentInfoWidget::class,
             ])
             ->middleware([
