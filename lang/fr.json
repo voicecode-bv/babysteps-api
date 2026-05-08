@@ -1,0 +1,28 @@
+{
+    "liked your post": "a aimé votre publication",
+    "liked your comment": "a aimé votre commentaire",
+    "shared a new post": "a partagé une nouvelle publication",
+    "Invitation accepted": "Invitation acceptée",
+    ":name joined :circle": ":name a rejoint :circle",
+    "New invitation in :circle": "Nouvelle invitation dans :circle",
+    ":inviter invited :invitee": ":inviter a invité :invitee",
+    ":name invited you": ":name vous a invité",
+    ":name has invited you": ":name vous a invité",
+    "Hello!": "Bonjour !",
+    ":name has invited you to join their circles.": ":name vous a invité à rejoindre ses cercles.",
+    "If you don't have an account yet, please register first.": "Si vous n'avez pas encore de compte, veuillez d'abord vous inscrire.",
+
+    "Ownership transfer requested": "Transfert de propriété demandé",
+    ":name wants to transfer \":circle\" to you": ":name souhaite vous transférer \":circle\"",
+    "Ownership transfer accepted": "Transfert de propriété accepté",
+    ":name is now the owner of :circle": ":name est désormais le propriétaire de :circle",
+    "Ownership transfer declined": "Transfert de propriété refusé",
+    ":name declined ownership of :circle": ":name a refusé la propriété de :circle",
+
+    ":name wants to transfer ownership of the circle \":circle\" to you.": ":name souhaite vous transférer la propriété du cercle \":circle\".",
+    "Open the app to accept or decline this request.": "Ouvrez l'application pour accepter ou refuser cette demande.",
+    ":name accepted your ownership transfer and is now the owner of the circle \":circle\".": ":name a accepté votre transfert de propriété et est désormais le propriétaire du cercle \":circle\".",
+    ":name declined the ownership transfer of the circle \":circle\". You remain the owner.": ":name a refusé le transfert de propriété du cercle \":circle\". Vous restez le propriétaire.",
+
+    "validation.max_video_duration": "La vidéo ne peut pas durer plus de :max minutes."
+}

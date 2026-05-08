@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\Subscriptions\MollieCheckoutController;
 use App\Http\Controllers\Api\Subscriptions\PlansController;
 use App\Http\Controllers\Api\Subscriptions\SubscriptionController;
 use App\Http\Controllers\Api\TagController;
+use App\Http\Controllers\Api\UserSearchController;
 use App\Http\Controllers\Api\WaitingListEntryController;
 use App\Http\Controllers\Api\Webhooks\AppleWebhookController;
 use App\Http\Controllers\Api\Webhooks\GoogleWebhookController;
@@ -152,6 +153,10 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('api.account.export');
 
     Route::get('/account/storage', AccountStorageController::class)->name('api.account.storage');
+
+    Route::get('/users/search', UserSearchController::class)
+        ->middleware('throttle:60,1')
+        ->name('api.users.search');
 
     Route::get('/profile', [ProfileController::class, 'showSelf'])->name('api.profile.show');
     Route::match(['put', 'patch'], '/profile', [ProfileController::class, 'update'])->name('api.profile.update');
