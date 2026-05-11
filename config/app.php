@@ -56,6 +56,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Frontend URL
+    |--------------------------------------------------------------------------
+    |
+    | The public-facing URL of the SPA / mobile app shell. Used for links in
+    | outgoing notifications (e.g. password reset emails) so that those links
+    | open the app via Universal Links / App Links rather than hitting the API.
+    |
+    */
+
+    'frontend_url' => env('FRONTEND_URL', 'https://innerr.app'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |

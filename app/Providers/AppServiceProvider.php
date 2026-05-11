@@ -16,6 +16,7 @@ use App\Services\Subscriptions\Channels\MollieChannel;
 use App\Services\Subscriptions\Google\GoogleAccessTokenClient;
 use App\Services\Subscriptions\Google\PlayDeveloperApi;
 use App\Services\Subscriptions\Google\PubSubOidcVerifier;
+use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Client\Factory as HttpFactory;
@@ -126,5 +127,11 @@ class AppServiceProvider extends ServiceProvider
 
         $events->listen(SubscriptionStatusChanged::class, InvalidateUserPlanCache::class);
         Subscription::observe(SubscriptionObserver::class);
+
+        ResetPassword::createUrlUsing(function ($user, string $token): string {
+            return rtrim((string) config('app.frontend_url'), '/')
+                .'/password-reset?token='.$token
+                .'&email='.urlencode($user->getEmailForPasswordReset());
+        });
     }
 }

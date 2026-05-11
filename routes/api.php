@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\NotificationPreferenceController;
 use App\Http\Controllers\Api\OAuthController;
 use App\Http\Controllers\Api\OnboardingController;
 use App\Http\Controllers\Api\OnboardingStepController;
+use App\Http\Controllers\Api\PasswordResetController;
 use App\Http\Controllers\Api\PersonController;
 use App\Http\Controllers\Api\PhotoMapController;
 use App\Http\Controllers\Api\PostController;
@@ -47,6 +48,13 @@ Route::get('/media/{path}', MediaController::class)
 
 Route::post('/auth/login', [AuthController::class, 'login'])->middleware('throttle:5,1')->name('api.auth.login');
 Route::post('/auth/register', [AuthController::class, 'register'])->name('api.auth.register');
+
+Route::post('/auth/forgot-password', [PasswordResetController::class, 'sendResetLink'])
+    ->middleware('throttle:5,1')
+    ->name('api.auth.forgot-password');
+Route::post('/auth/reset-password', [PasswordResetController::class, 'reset'])
+    ->middleware('throttle:5,1')
+    ->name('api.auth.reset-password');
 
 Route::get('/oauth/{provider}/redirect', [OAuthController::class, 'redirect'])
     ->where('provider', 'google|apple')
