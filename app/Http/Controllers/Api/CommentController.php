@@ -7,7 +7,6 @@ use App\Http\Requests\StoreCommentRequest;
 use App\Http\Resources\CommentResource;
 use App\Models\Comment;
 use App\Models\Post;
-use App\Notifications\CommentReplied;
 use App\Notifications\PostCommented;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
@@ -22,7 +21,7 @@ class CommentController extends Controller
     #[OA\Get(
         path: '/api/posts/{post}/comments',
         summary: 'List comments',
-        description: 'Return a paginated list of top-level comments for a post, oldest first. Each comment includes its replies (oldest first).',
+        description: 'Return a paginated list of comments for a post, oldest first.',
         tags: ['Comments'],
         security: [['sanctum' => []]],
         parameters: [
@@ -50,65 +49,14 @@ class CommentController extends Controller
         $userId = $request->user()->id;
 
         $comments = $post->comments()
-            ->whereNull('parent_comment_id')
-            ->with([
-                'user:id,name,username,avatar',
-                'replies' => fn ($q) => $q->oldest()
-                    ->with('user:id,name,username,avatar')
-                    ->withCount('likes')
-                    ->withExists(['likes as is_liked' => fn ($lq) => $lq->where('user_id', $userId)])
-                    ->limit(10),
-            ])
-            ->withCount(['likes', 'replies'])
+            ->with('user:id,name,username,avatar')
+            ->withCount('likes')
             ->withExists(['likes as is_liked' => fn ($q) => $q->where('user_id', $userId)])
             ->oldest()
             ->paginate(20)
             ->withQueryString();
 
         return CommentResource::collection($comments);
-    }
-
-    #[OA\Get(
-        path: '/api/comments/{comment}/replies',
-        summary: 'List replies',
-        description: 'Return a paginated list of replies for a comment, oldest first.',
-        tags: ['Comments'],
-        security: [['sanctum' => []]],
-        parameters: [
-            new OA\Parameter(name: 'comment', in: 'path', required: true, schema: new OA\Schema(type: 'string', format: 'uuid')),
-            new OA\Parameter(name: 'page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 1)),
-            new OA\Parameter(name: 'per_page', in: 'query', required: false, schema: new OA\Schema(type: 'integer', default: 10, maximum: 50)),
-        ],
-        responses: [
-            new OA\Response(
-                response: 200,
-                description: 'Paginated list of replies',
-                content: new OA\JsonContent(
-                    properties: [
-                        new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/Comment')),
-                        new OA\Property(property: 'links', type: 'object'),
-                        new OA\Property(property: 'meta', type: 'object'),
-                    ],
-                ),
-            ),
-            new OA\Response(response: 401, description: 'Unauthenticated'),
-            new OA\Response(response: 404, description: 'Comment not found'),
-        ],
-    )]
-    public function replies(Request $request, Comment $comment): AnonymousResourceCollection
-    {
-        $userId = $request->user()->id;
-        $perPage = min(50, max(1, (int) $request->integer('per_page', 10)));
-
-        $replies = $comment->replies()
-            ->with('user:id,name,username,avatar')
-            ->withCount('likes')
-            ->withExists(['likes as is_liked' => fn ($q) => $q->where('user_id', $userId)])
-            ->oldest()
-            ->paginate($perPage)
-            ->withQueryString();
-
-        return CommentResource::collection($replies);
     }
 
     #[OA\Post(
@@ -126,7 +74,6 @@ class CommentController extends Controller
                 required: ['body'],
                 properties: [
                     new OA\Property(property: 'body', type: 'string', maxLength: 1000, example: 'Great post!'),
-                    new OA\Property(property: 'parent_comment_id', type: 'string', format: 'uuid', nullable: true, description: 'ID of the comment being replied to'),
                 ],
             ),
         ),
@@ -149,23 +96,13 @@ class CommentController extends Controller
     {
         $comment = $post->comments()->create([
             'user_id' => $request->user()->id,
-            'parent_comment_id' => $request->validated('parent_comment_id'),
             'body' => $request->validated('body'),
         ]);
 
         $comment->load('user:id,name,username,avatar');
 
-        if ($comment->parent_comment_id === null) {
-            if ($request->user()->id !== $post->user_id) {
-                $post->user->notify(new PostCommented($request->user(), $post, $comment));
-            }
-        } else {
-            $comment->load('parentComment.user');
-            $parentAuthor = $comment->parentComment->user;
-
-            if ($parentAuthor->id !== $request->user()->id) {
-                $parentAuthor->notify(new CommentReplied($request->user(), $post, $comment, $comment->parentComment));
-            }
+        if ($request->user()->id !== $post->user_id) {
+            $post->user->notify(new PostCommented($request->user(), $post, $comment));
         }
 
         return (new CommentResource($comment))

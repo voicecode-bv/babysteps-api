@@ -8,10 +8,9 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 
-#[Fillable(['user_id', 'post_id', 'parent_comment_id', 'body'])]
+#[Fillable(['user_id', 'post_id', 'body'])]
 class Comment extends Model
 {
     /** @use HasFactory<CommentFactory> */
@@ -42,22 +41,6 @@ class Comment extends Model
     public function post(): BelongsTo
     {
         return $this->belongsTo(Post::class);
-    }
-
-    /**
-     * @return BelongsTo<self, $this>
-     */
-    public function parentComment(): BelongsTo
-    {
-        return $this->belongsTo(self::class, 'parent_comment_id');
-    }
-
-    /**
-     * @return HasMany<self, $this>
-     */
-    public function replies(): HasMany
-    {
-        return $this->hasMany(self::class, 'parent_comment_id');
     }
 
     /**
