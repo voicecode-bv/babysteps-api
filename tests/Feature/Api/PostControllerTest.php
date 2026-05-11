@@ -54,7 +54,7 @@ it('includes is_liked on comments', function () {
         ->and($notLiked['likes_count'])->toBe(0);
 });
 
-it('returns comments ordered newest to oldest', function () {
+it('returns comments ordered oldest to newest', function () {
     $user = User::factory()->create();
     $post = Post::factory()->create();
 
@@ -67,7 +67,7 @@ it('returns comments ordered newest to oldest', function () {
         ->assertSuccessful()
         ->json('data.comments.*.id');
 
-    expect($ids)->toBe([$newest->id, $middle->id, $oldest->id]);
+    expect($ids)->toBe([$oldest->id, $middle->id, $newest->id]);
 });
 
 it('returns not found for non-existent post', function () {
@@ -801,4 +801,62 @@ it('includes tags only for the post owner on show', function () {
         ->getJson("/api/posts/{$post->id}")
         ->assertOk()
         ->assertJsonMissingPath('data.tags');
+});
+
+it('blocks non-owner members from posting to an auto_add_new_users circle', function () {
+    Storage::fake('public');
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create(['auto_add_new_users' => true]);
+    // Member is auto-attached via UserObserver when created.
+    $member = User::factory()->create();
+
+    $this->actingAs($member)
+        ->postJson('/api/posts', [
+            'media' => UploadedFile::fake()->image('photo.jpg'),
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('circle_ids.0');
+});
+
+it('still allows the owner to post to their own auto_add_new_users circle', function () {
+    Storage::fake('public');
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create(['auto_add_new_users' => true]);
+
+    $this->actingAs($owner)
+        ->postJson('/api/posts', [
+            'media' => UploadedFile::fake()->image('photo.jpg'),
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertCreated();
+});
+
+it('blocks non-owner members from moving a post into an auto_add_new_users circle via update', function () {
+    Storage::fake('public');
+    $owner = User::factory()->create();
+    $autoCircle = Circle::factory()->for($owner)->create(['auto_add_new_users' => true]);
+    // Member is auto-attached via UserObserver when created.
+    $member = User::factory()->create();
+
+    $normalCircle = Circle::factory()->for($member)->create();
+    $post = Post::factory()->for($member)->create();
+    $post->circles()->attach($normalCircle);
+
+    $this->actingAs($member)
+        ->putJson("/api/posts/{$post->id}", [
+            'circle_ids' => [$autoCircle->id],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('circle_ids.0');
+});
+
+it('exposes auto_add_new_users on the circle resource', function () {
+    $user = User::factory()->create();
+    $circle = Circle::factory()->for($user)->create(['auto_add_new_users' => true]);
+
+    $this->actingAs($user)
+        ->getJson("/api/circles/{$circle->id}")
+        ->assertOk()
+        ->assertJsonPath('data.auto_add_new_users', true);
 });

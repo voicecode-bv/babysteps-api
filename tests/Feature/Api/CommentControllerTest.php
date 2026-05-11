@@ -7,7 +7,7 @@ use App\Notifications\CommentReplied;
 use App\Notifications\PostCommented;
 use Illuminate\Support\Facades\Notification;
 
-it('returns paginated top-level comments for a post, newest first, with nested replies', function () {
+it('returns paginated top-level comments for a post, oldest first, with nested replies', function () {
     $post = Post::factory()->create();
 
     $oldTopLevel = Comment::factory()->create([
@@ -27,9 +27,9 @@ it('returns paginated top-level comments for a post, newest first, with nested r
         ->getJson("/api/posts/{$post->id}/comments")
         ->assertOk()
         ->assertJsonCount(2, 'data')
-        ->assertJsonPath('data.0.id', $newTopLevel->id)
-        ->assertJsonPath('data.1.id', $oldTopLevel->id)
-        ->assertJsonPath('data.1.replies.0.id', $reply->id)
+        ->assertJsonPath('data.0.id', $oldTopLevel->id)
+        ->assertJsonPath('data.1.id', $newTopLevel->id)
+        ->assertJsonPath('data.0.replies.0.id', $reply->id)
         ->assertJsonStructure([
             'data' => [
                 ['id', 'body', 'created_at', 'user' => ['id'], 'replies'],

@@ -56,7 +56,7 @@ class PostController extends Controller
         $relations = [
             'user:id,name,username,avatar',
             'persons:id,name,birthdate,avatar_thumbnail,user_id', 'persons.user:id,username',
-            'comments' => fn ($query) => $query->whereNull('parent_comment_id')->latest()
+            'comments' => fn ($query) => $query->whereNull('parent_comment_id')->oldest()
                 ->with([
                     'user:id,name,username,avatar',
                     'replies' => fn ($q) => $q->oldest()

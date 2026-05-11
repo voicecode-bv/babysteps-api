@@ -22,7 +22,7 @@ class CommentController extends Controller
     #[OA\Get(
         path: '/api/posts/{post}/comments',
         summary: 'List comments',
-        description: 'Return a paginated list of top-level comments for a post, newest first. Each comment includes its replies (oldest first).',
+        description: 'Return a paginated list of top-level comments for a post, oldest first. Each comment includes its replies (oldest first).',
         tags: ['Comments'],
         security: [['sanctum' => []]],
         parameters: [
@@ -61,7 +61,7 @@ class CommentController extends Controller
             ])
             ->withCount(['likes', 'replies'])
             ->withExists(['likes as is_liked' => fn ($q) => $q->where('user_id', $userId)])
-            ->latest()
+            ->oldest()
             ->paginate(20)
             ->withQueryString();
 

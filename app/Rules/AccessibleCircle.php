@@ -21,7 +21,15 @@ class AccessibleCircle implements ValidationRule
             return;
         }
 
-        if ($circle->user_id === $this->user->id) {
+        $isOwner = $circle->user_id === $this->user->id;
+
+        if ($isOwner) {
+            return;
+        }
+
+        if ($circle->auto_add_new_users) {
+            $fail(__('Only the owner can post to this circle.'));
+
             return;
         }
 
