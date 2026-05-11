@@ -33,6 +33,9 @@ class CirclesTable
                 IconColumn::make('members_can_view_members')
                     ->label('Members can see others')
                     ->boolean(),
+                IconColumn::make('auto_add_new_users')
+                    ->label('Auto-add new users')
+                    ->boolean(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
@@ -49,6 +52,8 @@ class CirclesTable
                 TernaryFilter::make('members_can_invite'),
                 TernaryFilter::make('members_can_view_members')
                     ->label('Members can see others'),
+                TernaryFilter::make('auto_add_new_users')
+                    ->label('Auto-add new users'),
             ])
             ->recordActions([
                 EditAction::make(),

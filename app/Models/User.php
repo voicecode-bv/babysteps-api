@@ -5,12 +5,14 @@ namespace App\Models;
 use App\Enums\Entitlement;
 use App\Enums\NotificationPreference;
 use App\Enums\SubscriptionStatus;
+use App\Observers\UserObserver;
 use Database\Factories\UserFactory;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Attributes\ObservedBy;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -25,6 +27,7 @@ use Soved\Laravel\Gdpr\Portable;
 
 #[Fillable(['name', 'username', 'email', 'password', 'avatar', 'avatar_thumbnail', 'bio', 'locale', 'fcm_token', 'notification_preferences', 'default_circle_ids', 'device_info', 'google_id', 'apple_id', 'mollie_customer_id', 'onboarded_at'])]
 #[Hidden(['password', 'remember_token'])]
+#[ObservedBy([UserObserver::class])]
 class User extends Authenticatable implements FilamentUser, HasLocalePreference, PortableContract
 {
     /** @use HasFactory<UserFactory> */

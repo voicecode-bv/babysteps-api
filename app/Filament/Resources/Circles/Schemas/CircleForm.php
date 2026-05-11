@@ -28,6 +28,10 @@ class CircleForm
                     ->label('Members can see other members')
                     ->helperText('When disabled, non-owner members only see the owner and themselves in the member list.')
                     ->default(true),
+                Toggle::make('auto_add_new_users')
+                    ->label('Auto-add new users')
+                    ->helperText('Every newly registered user is automatically added to this circle.')
+                    ->default(false),
             ]);
     }
 }

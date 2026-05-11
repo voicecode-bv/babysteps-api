@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
-#[Fillable(['user_id', 'name', 'photo', 'members_can_invite', 'members_can_view_members'])]
+#[Fillable(['user_id', 'name', 'photo', 'members_can_invite', 'members_can_view_members', 'auto_add_new_users'])]
 class Circle extends Model
 {
     /** @use HasFactory<CircleFactory> */
@@ -25,6 +25,7 @@ class Circle extends Model
         return [
             'members_can_invite' => 'boolean',
             'members_can_view_members' => 'boolean',
+            'auto_add_new_users' => 'boolean',
         ];
     }
 
