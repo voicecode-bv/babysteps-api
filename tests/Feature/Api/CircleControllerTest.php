@@ -225,6 +225,73 @@ it('does not include pending_invitations when not_member_username is not provide
     expect($response->json('data.0'))->not->toHaveKey('pending_invitations');
 });
 
+it('hides other members from non-owner viewers when members_can_view_members is false', function () {
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create(['members_can_view_members' => false]);
+    $viewer = User::factory()->create();
+    $other = User::factory()->create();
+    $circle->members()->attach([$viewer->id, $other->id]);
+
+    $response = $this->actingAs($viewer)
+        ->getJson("/api/circles/{$circle->id}")
+        ->assertOk()
+        ->assertJsonPath('data.members_can_view_members', false)
+        ->assertJsonPath('data.members_count', 3)
+        ->assertJsonCount(2, 'data.members');
+
+    $memberIds = collect($response->json('data.members'))->pluck('id')->all();
+    expect($memberIds)->toContain($owner->id, $viewer->id);
+    expect($memberIds)->not->toContain($other->id);
+});
+
+it('still shows the full member list to the owner when members_can_view_members is false', function () {
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create(['members_can_view_members' => false]);
+    $member = User::factory()->create();
+    $other = User::factory()->create();
+    $circle->members()->attach([$member->id, $other->id]);
+
+    $this->actingAs($owner)
+        ->getJson("/api/circles/{$circle->id}")
+        ->assertOk()
+        ->assertJsonCount(3, 'data.members')
+        ->assertJsonPath('data.members_count', 3);
+});
+
+it('hides pending invitations from members when members_can_view_members is false even if members_can_invite is true', function () {
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create([
+        'members_can_invite' => true,
+        'members_can_view_members' => false,
+    ]);
+    $member = User::factory()->create();
+    $circle->members()->attach($member);
+
+    CircleInvitation::factory()->create([
+        'circle_id' => $circle->id,
+        'inviter_id' => $owner->id,
+    ]);
+
+    $this->actingAs($member)
+        ->getJson("/api/circles/{$circle->id}")
+        ->assertOk()
+        ->assertJsonMissingPath('data.pending_invitations');
+});
+
+it('defaults members_can_view_members to true so existing circles keep current behavior', function () {
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create();
+    $member = User::factory()->create();
+    $other = User::factory()->create();
+    $circle->members()->attach([$member->id, $other->id]);
+
+    $this->actingAs($member)
+        ->getJson("/api/circles/{$circle->id}")
+        ->assertOk()
+        ->assertJsonPath('data.members_can_view_members', true)
+        ->assertJsonCount(3, 'data.members');
+});
+
 it('ignores non-pending invitations when filtering by not_member_username', function () {
     $owner = User::factory()->create();
     $target = User::factory()->create(['username' => 'targetuser']);

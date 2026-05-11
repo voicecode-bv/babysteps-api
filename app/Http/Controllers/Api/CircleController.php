@@ -135,7 +135,7 @@ class CircleController extends Controller
     #[OA\Get(
         path: '/api/circles/{circle}',
         summary: 'Show circle',
-        description: 'Return a single circle with its members (including the owner). Accessible to the owner and to circle members. Pending invitations are only included for the owner, or for members when `members_can_invite` is true.',
+        description: 'Return a single circle with its members (including the owner). Accessible to the owner and to circle members. When `members_can_view_members` is false and the viewer is not the owner, the `members` array only contains the owner and the authenticated viewer. Pending invitations are only included for the owner, or for members when `members_can_invite` and `members_can_view_members` are both true.',
         tags: ['Circles'],
         security: [['sanctum' => []]],
         parameters: [
@@ -160,12 +160,18 @@ class CircleController extends Controller
     {
         $this->authorize('view', $circle);
 
+        $authUserId = $request->user()->id;
+        $isOwner = $authUserId === $circle->user_id;
+        $canViewMembers = $isOwner || $circle->members_can_view_members;
+
         $circle->load([
             'user:id,name,username,avatar',
-            'members:id,name,username,avatar',
+            'members' => fn ($query) => $query
+                ->select('users.id', 'users.name', 'users.username', 'users.avatar')
+                ->when(! $canViewMembers, fn ($q) => $q->whereKey($authUserId)),
         ])->loadCount('members');
 
-        if ($request->user()->id === $circle->user_id || $circle->members_can_invite) {
+        if ($canViewMembers && ($isOwner || $circle->members_can_invite)) {
             $circle->load(['invitations' => fn ($query) => $query->where('status', InvitationStatus::Pending)->with('user:id,username')]);
         }
 
