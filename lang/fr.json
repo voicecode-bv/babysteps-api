@@ -24,5 +24,11 @@
     ":name accepted your ownership transfer and is now the owner of the circle \":circle\".": ":name a accepté votre transfert de propriété et est désormais le propriétaire du cercle \":circle\".",
     ":name declined the ownership transfer of the circle \":circle\". You remain the owner.": ":name a refusé le transfert de propriété du cercle \":circle\". Vous restez le propriétaire.",
 
-    "validation.max_video_duration": "La vidéo ne peut pas durer plus de :max minutes."
+    "validation.max_video_duration": "La vidéo ne peut pas durer plus de :max minutes.",
+
+    "Reset your password": "Réinitialiser votre mot de passe",
+    "You are receiving this email because we received a password reset request for your account.": "Vous recevez cet e-mail parce que nous avons reçu une demande de réinitialisation du mot de passe pour votre compte.",
+    "Reset Password": "Réinitialiser le mot de passe",
+    "This password reset link will expire in :count minutes.": "Ce lien de réinitialisation expirera dans :count minutes.",
+    "If you did not request a password reset, no further action is required.": "Si vous n'avez pas demandé de réinitialisation du mot de passe, aucune action n'est requise."
 }

@@ -3,6 +3,7 @@
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -91,4 +92,69 @@ it('requires token, email and password on reset', function () {
     $this->postJson('/api/auth/reset-password', [])
         ->assertUnprocessable()
         ->assertJsonValidationErrors(['token', 'email', 'password']);
+});
+
+it('returns the forgot-password message in the active locale', function (string $locale, string $expected) {
+    App::setLocale($locale);
+
+    User::factory()->create(['email' => 'jane@example.com']);
+
+    $this->postJson('/api/auth/forgot-password', ['email' => 'jane@example.com'])
+        ->assertOk()
+        ->assertJsonPath('message', $expected);
+})->with([
+    'nl' => ['nl', 'We hebben je een e-mail gestuurd met een link om je wachtwoord te resetten.'],
+    'fr' => ['fr', 'Nous vous avons envoyé par e-mail le lien de réinitialisation de votre mot de passe.'],
+    'en' => ['en', 'We have emailed your password reset link.'],
+]);
+
+it('returns the reset-password success message in the active locale', function (string $locale, string $expected) {
+    App::setLocale($locale);
+
+    $user = User::factory()->create(['email' => 'jane@example.com']);
+    $token = app('auth.password.broker')->createToken($user);
+
+    $this->postJson('/api/auth/reset-password', [
+        'token' => $token,
+        'email' => 'jane@example.com',
+        'password' => 'new-password-123',
+        'password_confirmation' => 'new-password-123',
+    ])->assertOk()->assertJsonPath('message', $expected);
+})->with([
+    'nl' => ['nl', 'Je wachtwoord is gereset.'],
+    'fr' => ['fr', 'Votre mot de passe a été réinitialisé.'],
+    'en' => ['en', 'Your password has been reset.'],
+]);
+
+it('returns validation errors in the active locale', function (string $locale, string $expected) {
+    App::setLocale($locale);
+
+    $this->postJson('/api/auth/forgot-password', ['email' => 'not-an-email'])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.email.0', $expected);
+})->with([
+    'nl' => ['nl', 'e-mailadres is geen geldig e-mailadres.'],
+    'fr' => ['fr', 'Le champ adresse e-mail doit être une adresse e-mail valide.'],
+    'en' => ['en', 'The email address field must be a valid email address.'],
+]);
+
+it('renders the reset email in the user locale', function () {
+    Notification::fake();
+
+    $user = User::factory()->create(['email' => 'jane@example.com', 'locale' => 'nl']);
+
+    $this->postJson('/api/auth/forgot-password', ['email' => 'jane@example.com'])
+        ->assertOk();
+
+    Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use ($user) {
+        // NotificationSender wraps the channel call in setLocale($notifiable->preferredLocale());
+        // mirror that here so the assertion reflects what the recipient actually receives.
+        App::setLocale($user->preferredLocale());
+        $mail = $notification->toMail($user);
+
+        expect($mail->subject)->toBe('Reset je wachtwoord');
+        expect($mail->actionText)->toBe('Wachtwoord resetten');
+
+        return true;
+    });
 });
