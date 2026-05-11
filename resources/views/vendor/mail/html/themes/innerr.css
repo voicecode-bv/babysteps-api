@@ -1,16 +1,23 @@
-/* Innerr mail theme — aligned with innerr-website and innerr-app
- * Palette source: innerr-website/src/style.css
- *   night       #162020   (primary text)
- *   muted       #525858
- *   teal        #1D5F5C   (brand accent / buttons / links)
- *   teal-light  #2A7A76
- *   warmwhite   #FEFAF3   (outer background)
- *   cream       #FBF4EA
- *   sand-50     #fdf8f3   (inner body background)
- *   sand-100    #f9efe4
- *   sand-200    #f0dcc6   (borders)
- *   peach       #FBD9C0
- *   accent      #C25A2E   (warm highlight, error)
+/* Innerr mail theme — aligned with innerr-brand-guide (May 2026)
+ * Source of truth: /innerr-brand-guide/colors.md
+ *
+ *   Brand sand     #FCFAF3   (page background, sand)
+ *   Brand blue     #373D8A   (primary — titles, links, primary buttons)
+ *   Brand green    #4E9E3E   (secondary — success state, italic accents on sand)
+ *   Brand yellow   #F5EB69   (accent — italic accents on dark surfaces)
+ *   Brand orange   #F49710   (accent — warm highlights, "give" mark)
+ *
+ *   night          #1A1F4A   (deep brand-blue, used for body text)
+ *   muted          #5A607A   (softer blue for secondary copy)
+ *   teal-light     #4A52A8   (button hover)
+ *   teal-muted     #6E76C2   (placeholder, very soft labels)
+ *
+ *   sand-50        #FDFBF6   (slightly off-sand for inner panels)
+ *   sand-100       #F8F1E1   (panel content background)
+ *   sand-200       #EFE2C7   (borders)
+ *   sage-100       #DCEDD8   (success panel tint)
+ *
+ *   blush-600      #B22D1E   (destructive — used for error/destructive buttons only)
  */
 
 /* Base */
@@ -25,8 +32,8 @@ body *:not(html):not(style):not(br):not(tr):not(code) {
 
 body {
     -webkit-text-size-adjust: none;
-    background-color: #FEFAF3;
-    color: #162020;
+    background-color: #FCFAF3;
+    color: #1A1F4A;
     height: 100%;
     line-height: 1.6;
     margin: 0;
@@ -43,13 +50,13 @@ blockquote {
 }
 
 a {
-    color: #1D5F5C;
+    color: #373D8A;
     text-decoration: none;
-    border-bottom: 1px solid rgba(29, 95, 92, 0.25);
+    border-bottom: 1px solid rgba(55, 61, 138, 0.25);
 }
 
 a:hover {
-    border-bottom-color: #1D5F5C;
+    border-bottom-color: #373D8A;
 }
 
 a img {
@@ -59,30 +66,31 @@ a img {
 /* Typography */
 
 h1 {
-    color: #162020;
+    color: #373D8A;
     font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
-    font-size: 26px;
-    font-weight: 600;
+    font-size: 28px;
+    font-weight: 900;
     font-variation-settings: 'opsz' 144, 'SOFT' 100, 'wght' 900;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.02em;
     margin-top: 0;
     margin-bottom: 16px;
     text-align: start;
 }
 
 h2 {
-    color: #162020;
+    color: #373D8A;
     font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
     font-size: 20px;
-    font-weight: 600;
+    font-weight: 900;
     font-variation-settings: 'opsz' 144, 'SOFT' 100, 'wght' 900;
+    letter-spacing: -0.01em;
     margin-top: 0;
     margin-bottom: 12px;
     text-align: start;
 }
 
 h3 {
-    color: #162020;
+    color: #373D8A;
     font-size: 15px;
     font-weight: 600;
     margin-top: 0;
@@ -91,8 +99,9 @@ h3 {
 }
 
 p {
-    color: #162020;
+    color: #1A1F4A;
     font-size: 16px;
+    font-weight: 500;
     line-height: 1.6em;
     margin-top: 0;
     margin-bottom: 16px;
@@ -100,8 +109,20 @@ p {
 }
 
 p.sub {
-    color: #525858;
+    color: #5A607A;
     font-size: 13px;
+    font-weight: 500;
+}
+
+/* Italic accent inside a header — Playfair Display per brand guide.
+   Use one word only, e.g. <h1>Welcome to your <em>circle.</em></h1> */
+h1 em,
+h2 em {
+    font-family: 'Playfair Display', Georgia, 'Times New Roman', serif;
+    font-style: italic;
+    font-weight: 400;
+    color: #4E9E3E;
+    font-variation-settings: normal;
 }
 
 img {
@@ -114,7 +135,7 @@ img {
     -premailer-cellpadding: 0;
     -premailer-cellspacing: 0;
     -premailer-width: 100%;
-    background-color: #FEFAF3;
+    background-color: #FCFAF3;
     margin: 0;
     padding: 0;
     width: 100%;
@@ -137,10 +158,10 @@ img {
 }
 
 .header a {
-    color: #1D5F5C;
+    color: #373D8A;
     font-family: 'Fraunces', Georgia, 'Times New Roman', serif;
     font-size: 28px;
-    font-weight: 600;
+    font-weight: 900;
     font-variation-settings: 'opsz' 144, 'SOFT' 100, 'wght' 900;
     letter-spacing: -0.02em;
     text-decoration: none;
@@ -163,9 +184,9 @@ img {
     -premailer-cellpadding: 0;
     -premailer-cellspacing: 0;
     -premailer-width: 100%;
-    background-color: #FEFAF3;
-    border-bottom: 1px solid #FEFAF3;
-    border-top: 1px solid #FEFAF3;
+    background-color: #FCFAF3;
+    border-bottom: 1px solid #FCFAF3;
+    border-top: 1px solid #FCFAF3;
     margin: 0;
     padding: 0;
     width: 100%;
@@ -176,10 +197,10 @@ img {
     -premailer-cellspacing: 0;
     -premailer-width: 570px;
     background-color: #ffffff;
-    border-color: #f0dcc6;
-    border-radius: 20px;
+    border-color: #DCEDD8;
+    border-radius: 24px;
     border-width: 1px;
-    box-shadow: 0 1px 2px rgba(22, 32, 32, 0.04), 0 8px 24px rgba(22, 32, 32, 0.06);
+    box-shadow: 0 1px 2px rgba(26, 31, 74, 0.04), 0 8px 24px rgba(26, 31, 74, 0.08);
     margin: 0 auto;
     padding: 0;
     width: 570px;
@@ -192,13 +213,13 @@ img {
 /* Subcopy */
 
 .subcopy {
-    border-top: 1px solid #f0dcc6;
+    border-top: 1px solid #EFE2C7;
     margin-top: 28px;
     padding-top: 20px;
 }
 
 .subcopy p {
-    color: #525858;
+    color: #5A607A;
     font-size: 13px;
     line-height: 1.6em;
 }
@@ -216,13 +237,13 @@ img {
 }
 
 .footer p {
-    color: #525858;
+    color: #5A607A;
     font-size: 12px;
     text-align: center;
 }
 
 .footer a {
-    color: #525858;
+    color: #5A607A;
     text-decoration: underline;
     border-bottom: none;
 }
@@ -238,8 +259,8 @@ img {
 }
 
 .table th {
-    border-bottom: 1px solid #f0dcc6;
-    color: #162020;
+    border-bottom: 1px solid #EFE2C7;
+    color: #373D8A;
     font-size: 13px;
     font-weight: 600;
     letter-spacing: 0.02em;
@@ -249,7 +270,7 @@ img {
 }
 
 .table td {
-    color: #525858;
+    color: #5A607A;
     font-size: 15px;
     line-height: 20px;
     margin: 0;
@@ -261,7 +282,8 @@ img {
     padding: 40px 40px 32px;
 }
 
-/* Buttons */
+/* Buttons — pill-shaped, brand-aligned. The button-blue/primary maps to
+   Brand Blue (the only primary CTA across web, app and mail). */
 
 .action {
     -premailer-cellpadding: 0;
@@ -277,10 +299,10 @@ img {
 .button {
     -webkit-text-size-adjust: none;
     border-radius: 9999px;
-    color: #FEFAF3;
+    color: #FCFAF3;
     display: inline-block;
     font-size: 15px;
-    font-weight: 500;
+    font-weight: 600;
     letter-spacing: 0.01em;
     overflow: hidden;
     text-decoration: none;
@@ -288,48 +310,63 @@ img {
 
 .button-blue,
 .button-primary {
-    background-color: #1D5F5C;
-    border-bottom: 12px solid #1D5F5C;
-    border-left: 28px solid #1D5F5C;
-    border-right: 28px solid #1D5F5C;
-    border-top: 12px solid #1D5F5C;
+    background-color: #373D8A;
+    border-bottom: 12px solid #373D8A;
+    border-left: 28px solid #373D8A;
+    border-right: 28px solid #373D8A;
+    border-top: 12px solid #373D8A;
+    color: #FCFAF3;
 }
 
 .button-green,
 .button-success {
-    background-color: #2A7A76;
-    border-bottom: 12px solid #2A7A76;
-    border-left: 28px solid #2A7A76;
-    border-right: 28px solid #2A7A76;
-    border-top: 12px solid #2A7A76;
+    background-color: #4E9E3E;
+    border-bottom: 12px solid #4E9E3E;
+    border-left: 28px solid #4E9E3E;
+    border-right: 28px solid #4E9E3E;
+    border-top: 12px solid #4E9E3E;
+    color: #FCFAF3;
 }
 
+/* Destructive button — solid blush only. Per brand guide:
+   pair with a confirm step before the action actually fires. */
 .button-red,
-.button-error {
-    background-color: #C25A2E;
-    border-bottom: 12px solid #C25A2E;
-    border-left: 28px solid #C25A2E;
-    border-right: 28px solid #C25A2E;
-    border-top: 12px solid #C25A2E;
+.button-error,
+.button-danger {
+    background-color: #B22D1E;
+    border-bottom: 12px solid #B22D1E;
+    border-left: 28px solid #B22D1E;
+    border-right: 28px solid #B22D1E;
+    border-top: 12px solid #B22D1E;
+    color: #FCFAF3;
 }
 
-/* Panels */
+/* Panels — soft sand card with a left brand-blue indicator.
+   Use `panel panel-success` for a green-indicator variant. */
 
 .panel {
-    border-left: #1D5F5C solid 4px;
-    border-radius: 4px;
+    border-left: #373D8A solid 4px;
+    border-radius: 8px;
     margin: 24px 0;
     overflow: hidden;
 }
 
+.panel-success {
+    border-left-color: #4E9E3E;
+}
+
+.panel-warning {
+    border-left-color: #F49710;
+}
+
 .panel-content {
-    background-color: #fdf8f3;
-    color: #162020;
+    background-color: #FDFBF6;
+    color: #1A1F4A;
     padding: 18px 20px;
 }
 
 .panel-content p {
-    color: #162020;
+    color: #1A1F4A;
 }
 
 .panel-item {

@@ -15,8 +15,8 @@ it('renders mail notifications with the Innerr theme palette', function () {
     $html = (string) $mailMessage->render();
 
     expect($html)
-        ->toContain('#1D5F5C')
-        ->toContain('#FEFAF3')
+        ->toContain('#373D8A')
+        ->toContain('#FCFAF3')
         ->toContain('Playfair Display')
         ->toContain('DM Sans');
 });
