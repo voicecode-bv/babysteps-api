@@ -76,6 +76,7 @@ class MediaUploadService
         $resizedPath = tempnam(sys_get_temp_dir(), 'resized_').'.'.$file->getClientOriginalExtension();
 
         $image = Image::decodePath($file->getPathname());
+        $image->orient();
 
         if ($cover && $width !== null && $height !== null) {
             $image->cover($width, $height);
@@ -209,6 +210,7 @@ class MediaUploadService
 
         try {
             $image = Image::decodePath($file->getPathname());
+            $image->orient();
             $image->cover($size, $size);
             $image->save($tempThumb, quality: self::DISPLAY_QUALITY);
 
@@ -250,6 +252,7 @@ class MediaUploadService
 
         try {
             $image = Image::decodePath($tempSource);
+            $image->orient();
             $image->cover($size, $size);
             $image->save($tempThumb, quality: self::DISPLAY_QUALITY);
 
@@ -318,6 +321,7 @@ class MediaUploadService
 
             // Resize the thumbnail to a reasonable display size.
             $image = Image::decodePath($tempThumb);
+            $image->orient();
             $image->scaleDown(width: self::MAX_DISPLAY_WIDTH);
             $image->save($tempThumb, quality: self::DISPLAY_QUALITY);
 
