@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Circle;
 use App\Models\Person;
 use App\Models\User;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class MemberPersonSyncer
@@ -33,6 +34,70 @@ class MemberPersonSyncer
 
             return $person;
         });
+    }
+
+    /**
+     * Bulk variant of {@see self::attach()} for backfilling many users into one
+     * circle at once. Skips users already attached and re-uses existing Person
+     * records. Caller is responsible for chunking and excluding the owner.
+     *
+     * @param  Collection<int, User>|iterable<User>  $users
+     */
+    public function attachUsersBulk(Circle $circle, iterable $users): void
+    {
+        $users = Collection::make($users);
+
+        if ($users->isEmpty()) {
+            return;
+        }
+
+        $now = now();
+        $userIds = $users->pluck('id')->all();
+
+        DB::table('circle_user')->insertOrIgnore(
+            $users->map(fn (User $user) => [
+                'circle_id' => $circle->id,
+                'user_id' => $user->id,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])->all()
+        );
+
+        $personIdByUser = Person::query()
+            ->whereIn('user_id', $userIds)
+            ->pluck('id', 'user_id');
+
+        $missingPersonRows = $users
+            ->reject(fn (User $user) => $personIdByUser->has($user->id))
+            ->map(fn (User $user) => [
+                'created_by_user_id' => $user->id,
+                'user_id' => $user->id,
+                'name' => $user->name,
+                'avatar' => $user->avatar,
+                'avatar_thumbnail' => $user->avatar_thumbnail,
+                'usage_count' => 0,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])
+            ->values()
+            ->all();
+
+        if ($missingPersonRows !== []) {
+            DB::table('people')->insert($missingPersonRows);
+
+            $personIdByUser = Person::query()
+                ->whereIn('user_id', $userIds)
+                ->pluck('id', 'user_id');
+        }
+
+        DB::table('circle_person')->insertOrIgnore(
+            $personIdByUser->map(fn (string $personId) => [
+                'circle_id' => $circle->id,
+                'person_id' => $personId,
+                'created_at' => $now,
+                'updated_at' => $now,
+            ])->values()->all()
+        );
     }
 
     /**
