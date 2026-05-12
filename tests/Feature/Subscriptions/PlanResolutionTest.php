@@ -4,6 +4,7 @@ use App\Enums\SubscriptionStatus;
 use App\Models\Plan;
 use App\Models\Subscription;
 use App\Models\User;
+use Illuminate\Support\Facades\Cache;
 
 beforeEach(function () {
     Plan::factory()->free()->create();
@@ -82,6 +83,16 @@ it('flushes plan cache on subscription save', function () {
 
     $user = $user->fresh();
     expect($user->currentPlan()->slug)->toBe('plus');
+});
+
+it('always returns a hydrated Plan instance from default()', function () {
+    $first = Plan::default();
+    $second = Plan::default();
+
+    expect($first)->toBeInstanceOf(Plan::class)
+        ->and($second)->toBeInstanceOf(Plan::class)
+        ->and($second->slug)->toBe('free')
+        ->and(Cache::get('subscriptions:default_plan:id'))->toBeString();
 });
 
 it('flushes plan cache when subscription transitions to expired', function () {

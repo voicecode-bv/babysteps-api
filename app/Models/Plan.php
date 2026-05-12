@@ -65,13 +65,15 @@ class Plan extends Model
 
     public static function default(): self
     {
-        return Cache::rememberForever('subscriptions:default_plan', function (): self {
-            return self::query()->where('is_default', true)->firstOrFail();
+        $id = Cache::rememberForever('subscriptions:default_plan:id', function (): string {
+            return self::query()->where('is_default', true)->firstOrFail()->id;
         });
+
+        return self::query()->findOrFail($id);
     }
 
     public static function flushDefaultCache(): void
     {
-        Cache::forget('subscriptions:default_plan');
+        Cache::forget('subscriptions:default_plan:id');
     }
 }
