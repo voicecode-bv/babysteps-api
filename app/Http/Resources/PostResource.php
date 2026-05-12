@@ -16,7 +16,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'media_url', type: 'string'),
         new OA\Property(property: 'media_type', type: 'string', enum: ['image', 'video']),
         new OA\Property(property: 'thumbnail_url', type: 'string', nullable: true, description: 'Signed URL for the video thumbnail. Only present for video posts.'),
-        new OA\Property(property: 'thumbnail_small_url', type: 'string', nullable: true, description: 'Signed URL for the 150×150 grid thumbnail. Only present for image posts.'),
+        new OA\Property(property: 'thumbnail_small_url', type: 'string', nullable: true, description: 'Signed URL for the 300×300 grid thumbnail. Only present for image posts.'),
         new OA\Property(property: 'media_status', type: 'string', enum: ['processing', 'ready', 'failed'], description: 'Processing status of the media. Videos start as "processing" until transcoding completes.'),
         new OA\Property(property: 'caption', type: 'string', nullable: true),
         new OA\Property(property: 'location', type: 'string', nullable: true),

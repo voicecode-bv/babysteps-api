@@ -281,7 +281,7 @@ class ProfileController extends Controller
             cover: true,
         );
 
-        $thumbnailPath = $media->generateImageThumbnail($file, $user->id, 'avatars', size: 150);
+        $thumbnailPath = $media->generateImageThumbnail($file, $user->id, 'avatars', size: MediaUploadService::THUMBNAIL_SIZE_SMALL);
 
         $user->update([
             'avatar' => $path,

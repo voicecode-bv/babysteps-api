@@ -22,6 +22,20 @@ class MediaUploadService
     private const DISPLAY_QUALITY = 85;
 
     /**
+     * Edge length (in pixels) for the large square thumbnail used as a
+     * fallback above the small grid thumbnail. Sized for 2× retina
+     * displays so it stays sharp when shown on larger surfaces.
+     */
+    public const THUMBNAIL_SIZE_LARGE = 800;
+
+    /**
+     * Edge length (in pixels) for the small square thumbnail used in
+     * profile grids and avatar previews. Sized for 2× retina displays
+     * so a ~150px grid tile or avatar renders sharply.
+     */
+    public const THUMBNAIL_SIZE_SMALL = 300;
+
+    /**
      * Maximum height (in pixels) for transcoded display videos.
      * Videos are scaled to fit within this height while preserving
      * their aspect ratio. 1080p is sharp enough for any phone screen
@@ -197,7 +211,7 @@ class MediaUploadService
      *
      * @return string|null The storage path of the thumbnail, or null on failure.
      */
-    public function generateImageThumbnail(UploadedFile $file, string $userId, string $folder, int $size = 400): ?string
+    public function generateImageThumbnail(UploadedFile $file, string $userId, string $folder, int $size = self::THUMBNAIL_SIZE_LARGE): ?string
     {
         $file = $this->convertHeicToJpeg($file);
 
@@ -237,7 +251,7 @@ class MediaUploadService
      *
      * @return string|null The storage path of the thumbnail, or null on failure.
      */
-    public function generateImageThumbnailFromPath(string $sourcePath, string $userId, string $folder, int $size = 400): ?string
+    public function generateImageThumbnailFromPath(string $sourcePath, string $userId, string $folder, int $size = self::THUMBNAIL_SIZE_LARGE): ?string
     {
         $disk = MediaUrl::disk();
 

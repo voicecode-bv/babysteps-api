@@ -165,8 +165,8 @@ class BackfillPostMediaOrientation extends Command
             $disk->put($displayPath, file_get_contents($tempDisplay));
             UserStorage::trackPut($displayPath, $disk);
 
-            $thumbnailPath = $media->generateImageThumbnailFromPath($originalPath, $userId, 'posts', size: 400);
-            $thumbnailSmallPath = $media->generateImageThumbnailFromPath($originalPath, $userId, 'posts', size: 150);
+            $thumbnailPath = $media->generateImageThumbnailFromPath($originalPath, $userId, 'posts', size: MediaUploadService::THUMBNAIL_SIZE_LARGE);
+            $thumbnailSmallPath = $media->generateImageThumbnailFromPath($originalPath, $userId, 'posts', size: MediaUploadService::THUMBNAIL_SIZE_SMALL);
 
             return [
                 'media_url' => $displayPath,

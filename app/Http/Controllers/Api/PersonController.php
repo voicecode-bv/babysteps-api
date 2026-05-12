@@ -194,7 +194,7 @@ class PersonController extends Controller
             cover: true,
         );
 
-        $thumbnailPath = $media->generateImageThumbnail($file, $request->user()->id, 'person-avatars', size: 150);
+        $thumbnailPath = $media->generateImageThumbnail($file, $request->user()->id, 'person-avatars', size: MediaUploadService::THUMBNAIL_SIZE_SMALL);
 
         $person->update([
             'avatar' => $path,

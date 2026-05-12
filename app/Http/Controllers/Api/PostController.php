@@ -139,7 +139,7 @@ class PostController extends Controller
             $exif = ExifExtractor::fromUploadedFile($file);
 
             $thumbnailPath = $media->generateImageThumbnail($file, $request->user()->id, 'posts');
-            $thumbnailSmallPath = $media->generateImageThumbnail($file, $request->user()->id, 'posts', size: 150);
+            $thumbnailSmallPath = $media->generateImageThumbnail($file, $request->user()->id, 'posts', size: MediaUploadService::THUMBNAIL_SIZE_SMALL);
             $path = $media->store($file, $request->user()->id, 'posts');
         }
 

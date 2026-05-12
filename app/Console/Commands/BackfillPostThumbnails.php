@@ -9,7 +9,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('posts:backfill-thumbnails {--chunk=200 : Number of posts to process per chunk}')]
-#[Description('Generate 400x400 thumbnails for image posts that do not have one yet.')]
+#[Description('Generate large square thumbnails for image posts that do not have one yet.')]
 class BackfillPostThumbnails extends Command
 {
     public function handle(MediaUploadService $media): int
