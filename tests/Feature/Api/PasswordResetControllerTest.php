@@ -94,12 +94,11 @@ it('requires token, email and password on reset', function () {
         ->assertJsonValidationErrors(['token', 'email', 'password']);
 });
 
-it('returns the forgot-password message in the active locale', function (string $locale, string $expected) {
-    App::setLocale($locale);
-
+it('returns the forgot-password message in the requested locale', function (string $locale, string $expected) {
     User::factory()->create(['email' => 'jane@example.com']);
 
-    $this->postJson('/api/auth/forgot-password', ['email' => 'jane@example.com'])
+    $this->withHeader('Accept-Language', $locale)
+        ->postJson('/api/auth/forgot-password', ['email' => 'jane@example.com'])
         ->assertOk()
         ->assertJsonPath('message', $expected);
 })->with([
@@ -108,28 +107,28 @@ it('returns the forgot-password message in the active locale', function (string 
     'en' => ['en', 'We have emailed your password reset link.'],
 ]);
 
-it('returns the reset-password success message in the active locale', function (string $locale, string $expected) {
-    App::setLocale($locale);
-
+it('returns the reset-password success message in the requested locale', function (string $locale, string $expected) {
     $user = User::factory()->create(['email' => 'jane@example.com']);
     $token = app('auth.password.broker')->createToken($user);
 
-    $this->postJson('/api/auth/reset-password', [
-        'token' => $token,
-        'email' => 'jane@example.com',
-        'password' => 'new-password-123',
-        'password_confirmation' => 'new-password-123',
-    ])->assertOk()->assertJsonPath('message', $expected);
+    $this->withHeader('Accept-Language', $locale)
+        ->postJson('/api/auth/reset-password', [
+            'token' => $token,
+            'email' => 'jane@example.com',
+            'password' => 'new-password-123',
+            'password_confirmation' => 'new-password-123',
+        ])
+        ->assertOk()
+        ->assertJsonPath('message', $expected);
 })->with([
     'nl' => ['nl', 'Je wachtwoord is gereset.'],
     'fr' => ['fr', 'Votre mot de passe a été réinitialisé.'],
     'en' => ['en', 'Your password has been reset.'],
 ]);
 
-it('returns validation errors in the active locale', function (string $locale, string $expected) {
-    App::setLocale($locale);
-
-    $this->postJson('/api/auth/forgot-password', ['email' => 'not-an-email'])
+it('returns validation errors in the requested locale', function (string $locale, string $expected) {
+    $this->withHeader('Accept-Language', $locale)
+        ->postJson('/api/auth/forgot-password', ['email' => 'not-an-email'])
         ->assertUnprocessable()
         ->assertJsonPath('errors.email.0', $expected);
 })->with([
@@ -137,6 +136,20 @@ it('returns validation errors in the active locale', function (string $locale, s
     'fr' => ['fr', 'Le champ adresse e-mail doit être une adresse e-mail valide.'],
     'en' => ['en', 'The email address field must be a valid email address.'],
 ]);
+
+it('uses the Accept-Language header to localize the response', function () {
+    User::factory()->create(['email' => 'jane@example.com']);
+
+    $this->withHeader('Accept-Language', 'nl')
+        ->postJson('/api/auth/reset-password', [
+            'token' => 'bogus-token',
+            'email' => 'jane@example.com',
+            'password' => 'new-password-123',
+            'password_confirmation' => 'new-password-123',
+        ])
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.email.0', 'Deze resetlink is ongeldig of verlopen.');
+});
 
 it('renders the reset email in the user locale', function () {
     Notification::fake();
