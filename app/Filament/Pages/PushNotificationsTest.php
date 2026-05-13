@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Models\DeviceToken;
 use App\Models\User;
 use BackedEnum;
 use Filament\Actions\Action;
@@ -154,7 +155,16 @@ class PushNotificationsTest extends Page implements HasForms
         $successes = $report->successes()->count();
         $failures = $report->failures()->count();
 
-        $this->lastSummary = sprintf('Verstuurd naar %d device(s): %d succes, %d mislukt.', count($tokens), $successes, $failures);
+        $deadTokens = array_unique(array_merge($report->unknownTokens(), $report->invalidTokens()));
+        $pruned = $deadTokens === [] ? 0 : DeviceToken::query()->whereIn('token', $deadTokens)->delete();
+
+        $this->lastSummary = sprintf(
+            'Verstuurd naar %d device(s): %d succes, %d mislukt%s.',
+            count($tokens),
+            $successes,
+            $failures,
+            $pruned > 0 ? sprintf(' — %d dode token(s) opgeruimd', $pruned) : '',
+        );
 
         FilamentNotification::make()
             ->title('Push verstuurd')
