@@ -38,6 +38,9 @@ class CirclesTable
                 IconColumn::make('members_can_view_members')
                     ->label('Members can see others')
                     ->boolean(),
+                IconColumn::make('members_can_download')
+                    ->label('Members can download')
+                    ->boolean(),
                 IconColumn::make('auto_add_new_users')
                     ->label('Auto-add new users')
                     ->boolean(),
@@ -57,6 +60,8 @@ class CirclesTable
                 TernaryFilter::make('members_can_invite'),
                 TernaryFilter::make('members_can_view_members')
                     ->label('Members can see others'),
+                TernaryFilter::make('members_can_download')
+                    ->label('Members can download'),
                 TernaryFilter::make('auto_add_new_users')
                     ->label('Auto-add new users'),
             ])

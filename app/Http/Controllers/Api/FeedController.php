@@ -67,7 +67,10 @@ class FeedController extends Controller
         $this->applyPersonFilters($query, $request, $user);
 
         $posts = $query
-            ->withExists(['likes as is_liked' => fn ($q) => $q->where('user_id', $user->id)])
+            ->withExists([
+                'likes as is_liked' => fn ($q) => $q->where('user_id', $user->id),
+                'circles as is_downloadable_via_circles' => fn ($q) => $q->where('members_can_download', true),
+            ])
             ->latest()
             ->paginate(10)
             ->withQueryString();
@@ -122,7 +125,10 @@ class FeedController extends Controller
         $this->applyPersonFilters($query, $request, $user);
 
         $posts = $query
-            ->withExists(['likes as is_liked' => fn ($q) => $q->where('user_id', $user->id)])
+            ->withExists([
+                'likes as is_liked' => fn ($q) => $q->where('user_id', $user->id),
+                'circles as is_downloadable_via_circles' => fn ($q) => $q->where('members_can_download', true),
+            ])
             ->latest()
             ->paginate(21)
             ->withQueryString();

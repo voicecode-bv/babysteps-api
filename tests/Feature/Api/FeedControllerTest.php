@@ -172,6 +172,50 @@ it('returns empty data when no posts exist', function () {
         ->assertJsonCount(0, 'data');
 });
 
+it('marks own posts as downloadable in the feed', function () {
+    $user = User::factory()->create();
+    $circle = Circle::factory()->for($user)->create(['members_can_download' => false]);
+    $post = Post::factory()->create(['user_id' => $user->id]);
+    $post->circles()->attach($circle);
+
+    $this->actingAs($user)
+        ->getJson('/api/feed')
+        ->assertSuccessful()
+        ->assertJsonPath('data.0.is_downloadable', true);
+});
+
+it('marks viewer posts as downloadable when any shared circle allows download', function () {
+    $owner = User::factory()->create();
+    $viewer = User::factory()->create();
+    $allowsDownload = Circle::factory()->for($owner)->create(['members_can_download' => true]);
+    $blocksDownload = Circle::factory()->for($owner)->create(['members_can_download' => false]);
+    $allowsDownload->members()->attach($viewer);
+    $blocksDownload->members()->attach($viewer);
+
+    $post = Post::factory()->create(['user_id' => $owner->id]);
+    $post->circles()->attach([$allowsDownload->id, $blocksDownload->id]);
+
+    $this->actingAs($viewer)
+        ->getJson('/api/feed')
+        ->assertSuccessful()
+        ->assertJsonPath('data.0.is_downloadable', true);
+});
+
+it('does not mark viewer posts as downloadable when no shared circle allows download', function () {
+    $owner = User::factory()->create();
+    $viewer = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create(['members_can_download' => false]);
+    $circle->members()->attach($viewer);
+
+    $post = Post::factory()->create(['user_id' => $owner->id]);
+    $post->circles()->attach($circle);
+
+    $this->actingAs($viewer)
+        ->getJson('/api/feed')
+        ->assertSuccessful()
+        ->assertJsonPath('data.0.is_downloadable', false);
+});
+
 it('requires authentication to view feed', function () {
     $this->getJson('/api/feed')
         ->assertUnauthorized();

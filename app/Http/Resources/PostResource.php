@@ -34,6 +34,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'likes_count', type: 'integer'),
         new OA\Property(property: 'comments_count', type: 'integer'),
         new OA\Property(property: 'is_liked', type: 'boolean'),
+        new OA\Property(property: 'is_downloadable', type: 'boolean', description: 'Whether the authenticated user is allowed to download the post media. True for the post owner, and for viewers when at least one of the post\'s circles has `members_can_download` enabled.'),
         new OA\Property(property: 'comments', type: 'array', items: new OA\Items(ref: '#/components/schemas/Comment')),
         new OA\Property(
             property: 'persons',
@@ -105,6 +106,8 @@ class PostResource extends JsonResource
             'likes_count' => $this->likes_count ?? 0,
             'comments_count' => $this->comments_count ?? 0,
             'is_liked' => (bool) ($this->is_liked ?? false),
+            'is_downloadable' => $request->user()?->id === $this->user_id
+                || (bool) ($this->is_downloadable_via_circles ?? false),
             'comments' => CommentResource::collection($this->whenLoaded('comments')),
             'persons' => $this->whenLoaded('persons', fn () => $this->persons->map(fn ($person) => [
                 'id' => $person->id,

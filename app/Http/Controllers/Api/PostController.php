@@ -67,7 +67,10 @@ class PostController extends Controller
         }
 
         $post->load($relations);
-        $post->loadExists(['likes as is_liked' => fn ($q) => $q->where('user_id', $request->user()->id)]);
+        $post->loadExists([
+            'likes as is_liked' => fn ($q) => $q->where('user_id', $request->user()->id),
+            'circles as is_downloadable_via_circles' => fn ($q) => $q->where('members_can_download', true),
+        ]);
 
         return new PostResource($post);
     }
@@ -370,6 +373,10 @@ class PostController extends Controller
             'circles:id,name,photo',
             'tags:id,name',
             'persons:id,name,birthdate,avatar_thumbnail,user_id', 'persons.user:id,username',
+        ]);
+        $post->loadExists([
+            'likes as is_liked' => fn ($q) => $q->where('user_id', $userId),
+            'circles as is_downloadable_via_circles' => fn ($q) => $q->where('members_can_download', true),
         ]);
 
         return new PostResource($post);

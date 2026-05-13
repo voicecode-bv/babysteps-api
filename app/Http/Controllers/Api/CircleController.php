@@ -230,7 +230,7 @@ class CircleController extends Controller
     #[OA\Put(
         path: '/api/circles/{circle}/settings',
         summary: 'Update circle settings',
-        description: 'Update circle settings such as whether members can invite others. Requires ownership.',
+        description: 'Update circle settings such as whether members can invite others, view the member list, or download media. Requires ownership. At least one setting must be present in the request body — settings not included are left unchanged.',
         tags: ['Circles'],
         security: [['sanctum' => []]],
         parameters: [
@@ -239,9 +239,10 @@ class CircleController extends Controller
         requestBody: new OA\RequestBody(
             required: true,
             content: new OA\JsonContent(
-                required: ['members_can_invite'],
                 properties: [
                     new OA\Property(property: 'members_can_invite', type: 'boolean', example: true),
+                    new OA\Property(property: 'members_can_view_members', type: 'boolean', example: true),
+                    new OA\Property(property: 'members_can_download', type: 'boolean', example: false),
                 ],
             ),
         ),
