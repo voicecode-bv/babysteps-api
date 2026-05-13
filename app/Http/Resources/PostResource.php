@@ -14,6 +14,7 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'id', type: 'string', format: 'uuid'),
         new OA\Property(property: 'media_url', type: 'string'),
+        new OA\Property(property: 'original_media_url', type: 'string', nullable: true, description: 'Signed URL for the untouched original upload (pre-resize / pre-transcode). Only present when `is_downloadable` is true.'),
         new OA\Property(property: 'media_type', type: 'string', enum: ['image', 'video']),
         new OA\Property(property: 'thumbnail_url', type: 'string', nullable: true, description: 'Signed URL for the video thumbnail. Only present for video posts.'),
         new OA\Property(property: 'thumbnail_small_url', type: 'string', nullable: true, description: 'Signed URL for the 300×300 grid thumbnail. Only present for image posts.'),
@@ -83,9 +84,15 @@ class PostResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $isOwner = $request->user()?->id === $this->user_id;
+        $isDownloadable = $isOwner || (bool) ($this->is_downloadable_via_circles ?? false);
+
         $data = [
             'id' => $this->id,
             'media_url' => MediaUrl::sign($this->media_url),
+            'original_media_url' => $isDownloadable
+                ? MediaUrl::sign(MediaUrl::originalPath($this->media_url) ?? $this->media_url)
+                : null,
             'media_type' => $this->media_type,
             'thumbnail_url' => MediaUrl::sign($this->thumbnail_url),
             'thumbnail_small_url' => MediaUrl::sign($this->thumbnail_small_url),
@@ -106,8 +113,7 @@ class PostResource extends JsonResource
             'likes_count' => $this->likes_count ?? 0,
             'comments_count' => $this->comments_count ?? 0,
             'is_liked' => (bool) ($this->is_liked ?? false),
-            'is_downloadable' => $request->user()?->id === $this->user_id
-                || (bool) ($this->is_downloadable_via_circles ?? false),
+            'is_downloadable' => $isDownloadable,
             'comments' => CommentResource::collection($this->whenLoaded('comments')),
             'persons' => $this->whenLoaded('persons', fn () => $this->persons->map(fn ($person) => [
                 'id' => $person->id,
@@ -119,7 +125,7 @@ class PostResource extends JsonResource
             ])),
         ];
 
-        if ($request->user()?->id === $this->user_id) {
+        if ($isOwner) {
             $data['circles'] = $this->whenLoaded('circles', fn () => $this->circles->map(fn ($circle) => [
                 'id' => $circle->id,
                 'name' => $circle->name,

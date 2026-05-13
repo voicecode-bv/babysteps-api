@@ -118,6 +118,40 @@ it('does not mark viewer posts as downloadable on show when no shared circle all
         ->assertJsonPath('data.is_downloadable', false);
 });
 
+it('returns an original_media_url pointing at the originals folder when downloadable', function () {
+    $owner = User::factory()->create();
+    $post = Post::factory()->create([
+        'user_id' => $owner->id,
+        'media_url' => "users/{$owner->id}/posts/abc123.jpg",
+    ]);
+
+    $response = $this->actingAs($owner)
+        ->getJson("/api/posts/{$post->id}")
+        ->assertSuccessful();
+
+    $url = $response->json('data.original_media_url');
+    expect($url)->toBeString()
+        ->and($url)->toContain("users/{$owner->id}/originals/posts/abc123.jpg");
+});
+
+it('omits original_media_url when the post is not downloadable', function () {
+    $owner = User::factory()->create();
+    $viewer = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create(['members_can_download' => false]);
+    $circle->members()->attach($viewer);
+
+    $post = Post::factory()->create([
+        'user_id' => $owner->id,
+        'media_url' => "users/{$owner->id}/posts/abc123.jpg",
+    ]);
+    $post->circles()->attach($circle);
+
+    $this->actingAs($viewer)
+        ->getJson("/api/posts/{$post->id}")
+        ->assertSuccessful()
+        ->assertJsonPath('data.original_media_url', null);
+});
+
 it('requires authentication to show a post', function () {
     $post = Post::factory()->create();
 
