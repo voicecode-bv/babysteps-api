@@ -8,7 +8,7 @@ use App\Notifications\CircleInvitationReceivedNotification;
 use App\Notifications\CircleMemberInvitedByMemberNotification;
 
 it('stores CircleInvitationAcceptedNotification with a slug type', function () {
-    $inviter = User::factory()->create(['fcm_token' => null]);
+    $inviter = User::factory()->create();
     $invitee = User::factory()->create();
     $circle = Circle::factory()->for($inviter)->create();
     $invitation = CircleInvitation::factory()->create([
@@ -24,7 +24,7 @@ it('stores CircleInvitationAcceptedNotification with a slug type', function () {
 
 it('stores CircleMemberInvitedByMemberNotification with a slug type', function () {
     $inviter = User::factory()->create();
-    $member = User::factory()->create(['fcm_token' => null]);
+    $member = User::factory()->create();
     $invitee = User::factory()->create();
     $circle = Circle::factory()->for($inviter)->create();
     $invitation = CircleInvitation::factory()->create([
@@ -40,7 +40,7 @@ it('stores CircleMemberInvitedByMemberNotification with a slug type', function (
 
 it('stores CircleInvitationReceivedNotification with a slug type', function () {
     $inviter = User::factory()->create();
-    $invitee = User::factory()->create(['fcm_token' => null]);
+    $invitee = User::factory()->create();
     $circle = Circle::factory()->for($inviter)->create();
     $invitation = CircleInvitation::factory()->create([
         'user_id' => $invitee->id,

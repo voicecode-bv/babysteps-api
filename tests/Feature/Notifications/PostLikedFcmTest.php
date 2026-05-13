@@ -12,7 +12,7 @@ it('builds an fcm message with the liker name and post id', function () {
     $post = new Post;
     $post->id = 7;
 
-    $owner = new User(['fcm_token' => 'token']);
+    $owner = new User;
 
     $message = (new PostLiked($liker, $post))->toFcm($owner);
 

@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Events\SubscriptionStatusChanged;
 use App\Listeners\InvalidateUserPlanCache;
+use App\Listeners\PruneInvalidFcmTokens;
 use App\Models\Subscription;
 use App\Observers\SubscriptionObserver;
 use App\Services\Subscriptions\Apple\AppleJwsVerifier;
@@ -20,6 +21,7 @@ use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Client\Factory as HttpFactory;
+use Illuminate\Notifications\Events\NotificationFailed;
 use Illuminate\Support\ServiceProvider;
 use MatanYadaev\EloquentSpatial\EloquentSpatial;
 use MatanYadaev\EloquentSpatial\Enums\Srid;
@@ -126,6 +128,7 @@ class AppServiceProvider extends ServiceProvider
         EloquentSpatial::setDefaultSrid(Srid::WGS84);
 
         $events->listen(SubscriptionStatusChanged::class, InvalidateUserPlanCache::class);
+        $events->listen(NotificationFailed::class, PruneInvalidFcmTokens::class);
         Subscription::observe(SubscriptionObserver::class);
 
         ResetPassword::createUrlUsing(function ($user, string $token): string {

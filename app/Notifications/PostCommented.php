@@ -31,7 +31,7 @@ class PostCommented extends Notification implements ShouldQueue
     {
         $channels = ['database'];
 
-        if (! empty($notifiable->fcm_token) && $notifiable->wantsPushNotification(NotificationPreference::PostCommented)) {
+        if ($notifiable->deviceTokens()->exists() && $notifiable->wantsPushNotification(NotificationPreference::PostCommented)) {
             $channels[] = FcmChannel::class;
         }
 

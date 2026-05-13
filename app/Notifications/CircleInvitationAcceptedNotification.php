@@ -28,7 +28,7 @@ class CircleInvitationAcceptedNotification extends Notification implements Shoul
     {
         $channels = ['mail', 'database'];
 
-        if (! empty($notifiable->fcm_token) && $notifiable->wantsPushNotification(NotificationPreference::CircleInvitationAccepted)) {
+        if ($notifiable->deviceTokens()->exists() && $notifiable->wantsPushNotification(NotificationPreference::CircleInvitationAccepted)) {
             $channels[] = FcmChannel::class;
         }
 

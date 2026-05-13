@@ -47,8 +47,7 @@ it('writes a ZIP containing data.json and all user media to the export disk', fu
 
     $payload = json_decode($zip->getFromName('data.json'), true);
     expect($payload['email'])->toBe('alice@example.com')
-        ->and($payload)->not->toHaveKey('password')
-        ->and($payload)->not->toHaveKey('fcm_token');
+        ->and($payload)->not->toHaveKey('password');
 
     expect($zip->getFromName('media/posts/one.jpg'))->toBe('post-one-bytes')
         ->and($zip->getFromName('media/originals/posts/one.mov'))->toBe('original-bytes');

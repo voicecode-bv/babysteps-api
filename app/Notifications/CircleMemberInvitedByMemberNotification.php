@@ -27,7 +27,7 @@ class CircleMemberInvitedByMemberNotification extends Notification implements Sh
     {
         $channels = ['database'];
 
-        if (! empty($notifiable->fcm_token)) {
+        if ($notifiable->deviceTokens()->exists()) {
             $channels[] = FcmChannel::class;
         }
 

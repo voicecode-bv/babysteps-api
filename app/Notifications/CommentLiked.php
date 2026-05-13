@@ -28,7 +28,7 @@ class CommentLiked extends Notification implements ShouldQueue
     {
         $channels = ['database'];
 
-        if (! empty($notifiable->fcm_token) && $notifiable->wantsPushNotification(NotificationPreference::CommentLiked)) {
+        if ($notifiable->deviceTokens()->exists() && $notifiable->wantsPushNotification(NotificationPreference::CommentLiked)) {
             $channels[] = FcmChannel::class;
         }
 

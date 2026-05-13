@@ -68,13 +68,14 @@ it('can like another users post', function () {
         ->assertJsonPath('likes_count', 1);
 });
 
-it('sends a push notification when the post owner has an fcm token', function () {
+it('sends a push notification when the post owner has a device token', function () {
     Notification::fake();
 
     $preferences = NotificationPreference::defaults();
     $preferences['post_liked'] = true;
 
-    $owner = User::factory()->create(['fcm_token' => 'test-token', 'notification_preferences' => $preferences]);
+    $owner = User::factory()->create(['notification_preferences' => $preferences]);
+    $owner->deviceTokens()->create(['token' => 'test-token', 'last_used_at' => now()]);
     $post = Post::factory()->create(['user_id' => $owner->id]);
     $liker = User::factory()->create();
 
@@ -89,10 +90,10 @@ it('sends a push notification when the post owner has an fcm token', function ()
     );
 });
 
-it('does not include the fcm channel when the post owner has no fcm token', function () {
+it('does not include the fcm channel when the post owner has no device tokens', function () {
     Notification::fake();
 
-    $owner = User::factory()->create(['fcm_token' => null]);
+    $owner = User::factory()->create();
     $post = Post::factory()->create(['user_id' => $owner->id]);
 
     $this->actingAs(User::factory()->create())

@@ -20,6 +20,8 @@ class AnonymizeUser
         DB::transaction(function () use ($user) {
             $user->tokens()->delete();
 
+            $user->deviceTokens()->delete();
+
             DB::table('sessions')->where('user_id', $user->id)->delete();
 
             DB::table('password_reset_tokens')->where('email', $user->email)->delete();
@@ -59,7 +61,6 @@ class AnonymizeUser
                 'password' => Hash::make(Str::random(64)),
                 'avatar' => null,
                 'bio' => null,
-                'fcm_token' => null,
                 'notification_preferences' => null,
                 'default_circle_ids' => null,
                 'device_info' => null,

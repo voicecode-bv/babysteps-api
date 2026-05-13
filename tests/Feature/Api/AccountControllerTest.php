@@ -24,9 +24,13 @@ it('returns 204 and anonymizes the authenticated user', function () {
         'email' => 'alice@example.com',
         'bio' => 'Hello',
         'locale' => 'nl',
-        'fcm_token' => 'token-abc',
         'device_info' => ['platform' => 'ios'],
         'default_circle_ids' => [1, 2],
+    ]);
+
+    $user->deviceTokens()->create([
+        'token' => 'token-abc',
+        'last_used_at' => now(),
     ]);
 
     $this->actingAs($user)->deleteJson('/api/account')->assertNoContent();
@@ -38,7 +42,7 @@ it('returns 204 and anonymizes the authenticated user', function () {
         ->and($user->email)->toStartWith('deleted_')
         ->and($user->email)->toEndWith('@deleted.local')
         ->and($user->bio)->toBeNull()
-        ->and($user->fcm_token)->toBeNull()
+        ->and($user->deviceTokens()->exists())->toBeFalse()
         ->and($user->device_info)->toBeNull()
         ->and($user->default_circle_ids)->toBeNull()
         ->and($user->notification_preferences)->toBeNull()

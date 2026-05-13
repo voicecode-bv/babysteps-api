@@ -27,7 +27,7 @@ class CircleOwnershipTransferRequestedNotification extends Notification implemen
     {
         $channels = ['mail', 'database'];
 
-        if (! empty($notifiable->fcm_token) && $notifiable->wantsPushNotification(NotificationPreference::CircleOwnershipTransferRequested)) {
+        if ($notifiable->deviceTokens()->exists() && $notifiable->wantsPushNotification(NotificationPreference::CircleOwnershipTransferRequested)) {
             $channels[] = FcmChannel::class;
         }
 

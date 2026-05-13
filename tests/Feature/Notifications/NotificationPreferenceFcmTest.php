@@ -11,11 +11,22 @@ use App\Notifications\PostLiked;
 use App\Notifications\PostTagged;
 use NotificationChannels\Fcm\FcmChannel;
 
+function userWithDeviceToken(array $preferences = []): User
+{
+    $user = User::factory()->create(
+        $preferences !== [] ? ['notification_preferences' => $preferences] : [],
+    );
+
+    $user->deviceTokens()->create(['token' => 'token-'.$user->id, 'last_used_at' => now()]);
+
+    return $user;
+}
+
 it('includes fcm channel when preference is enabled', function () {
     $preferences = NotificationPreference::defaults();
     $preferences['post_liked'] = true;
 
-    $user = new User(['fcm_token' => 'token', 'notification_preferences' => $preferences]);
+    $user = userWithDeviceToken($preferences);
 
     $notification = new PostLiked(new User, new Post);
 
@@ -26,7 +37,7 @@ it('excludes fcm channel when preference is disabled', function () {
     $preferences = NotificationPreference::defaults();
     $preferences['post_liked'] = false;
 
-    $user = new User(['fcm_token' => 'token', 'notification_preferences' => $preferences]);
+    $user = userWithDeviceToken($preferences);
 
     $notification = new PostLiked(new User, new Post);
 
@@ -38,7 +49,7 @@ it('excludes fcm for post_commented when disabled', function () {
     $preferences = NotificationPreference::defaults();
     $preferences['post_commented'] = false;
 
-    $user = new User(['fcm_token' => 'token', 'notification_preferences' => $preferences]);
+    $user = userWithDeviceToken($preferences);
 
     $notification = new PostCommented(new User, new Post, new Comment);
 
@@ -49,7 +60,7 @@ it('excludes fcm for comment_liked when disabled', function () {
     $preferences = NotificationPreference::defaults();
     $preferences['comment_liked'] = false;
 
-    $user = new User(['fcm_token' => 'token', 'notification_preferences' => $preferences]);
+    $user = userWithDeviceToken($preferences);
 
     $notification = new CommentLiked(new User, new Comment);
 
@@ -60,7 +71,7 @@ it('excludes fcm for new_circle_post when disabled', function () {
     $preferences = NotificationPreference::defaults();
     $preferences['new_circle_post'] = false;
 
-    $user = new User(['fcm_token' => 'token', 'notification_preferences' => $preferences]);
+    $user = userWithDeviceToken($preferences);
 
     $notification = new NewCirclePost(new User, new Post);
 
@@ -71,7 +82,7 @@ it('excludes fcm for post_tagged when disabled', function () {
     $preferences = NotificationPreference::defaults();
     $preferences['post_tagged'] = false;
 
-    $user = new User(['fcm_token' => 'token', 'notification_preferences' => $preferences]);
+    $user = userWithDeviceToken($preferences);
 
     $notification = new PostTagged(new User, new Post);
 
@@ -79,7 +90,7 @@ it('excludes fcm for post_tagged when disabled', function () {
 });
 
 it('respects default preferences for each notification type', function () {
-    $user = new User(['fcm_token' => 'token']);
+    $user = userWithDeviceToken();
 
     $enabledByDefault = [
         new PostLiked(new User, new Post),

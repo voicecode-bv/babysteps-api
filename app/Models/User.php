@@ -25,7 +25,7 @@ use Laravel\Sanctum\HasApiTokens;
 use Soved\Laravel\Gdpr\Contracts\Portable as PortableContract;
 use Soved\Laravel\Gdpr\Portable;
 
-#[Fillable(['name', 'username', 'email', 'password', 'avatar', 'avatar_thumbnail', 'bio', 'locale', 'fcm_token', 'notification_preferences', 'default_circle_ids', 'device_info', 'google_id', 'apple_id', 'mollie_customer_id', 'onboarded_at'])]
+#[Fillable(['name', 'username', 'email', 'password', 'avatar', 'avatar_thumbnail', 'bio', 'locale', 'notification_preferences', 'default_circle_ids', 'device_info', 'google_id', 'apple_id', 'mollie_customer_id', 'onboarded_at'])]
 #[Hidden(['password', 'remember_token'])]
 #[ObservedBy([UserObserver::class])]
 class User extends Authenticatable implements FilamentUser, HasLocalePreference, PortableContract
@@ -136,6 +136,14 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
     }
 
     /**
+     * @return HasMany<DeviceToken, $this>
+     */
+    public function deviceTokens(): HasMany
+    {
+        return $this->hasMany(DeviceToken::class);
+    }
+
+    /**
      * @return HasOne<Subscription, $this>
      */
     public function activeSubscription(): HasOne
@@ -197,9 +205,12 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
         return ($this->notification_preferences ?? NotificationPreference::defaults())[$type->value] ?? true;
     }
 
-    public function routeNotificationForFcm(): ?string
+    /**
+     * @return array<int, string>
+     */
+    public function routeNotificationForFcm(): array
     {
-        return $this->fcm_token;
+        return $this->deviceTokens()->pluck('token')->all();
     }
 
     public function preferredLocale(): ?string
@@ -224,5 +235,5 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
      *
      * @var array
      */
-    protected $gdprHidden = ['password', 'fcm_token'];
+    protected $gdprHidden = ['password'];
 }

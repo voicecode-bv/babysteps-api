@@ -28,7 +28,7 @@ class NewCirclePost extends Notification implements ShouldQueue
     {
         $channels = ['database'];
 
-        if (! empty($notifiable->fcm_token) && $notifiable->wantsPushNotification(NotificationPreference::NewCirclePost)) {
+        if ($notifiable->deviceTokens()->exists() && $notifiable->wantsPushNotification(NotificationPreference::NewCirclePost)) {
             $channels[] = FcmChannel::class;
         }
 

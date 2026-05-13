@@ -28,7 +28,7 @@ class PostTagged extends Notification implements ShouldQueue
     {
         $channels = ['database'];
 
-        if (! empty($notifiable->fcm_token) && $notifiable->wantsPushNotification(NotificationPreference::PostTagged)) {
+        if ($notifiable->deviceTokens()->exists() && $notifiable->wantsPushNotification(NotificationPreference::PostTagged)) {
             $channels[] = FcmChannel::class;
         }
 
