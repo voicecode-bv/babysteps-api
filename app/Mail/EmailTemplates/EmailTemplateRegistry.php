@@ -25,6 +25,7 @@ class EmailTemplateRegistry
      *     label: string,
      *     description: string,
      *     format: string,
+     *     mailer?: string|null,
      *     placeholders: array<string, string>,
      *     samples: array<string, string>,
      *     defaults: array<string, array{subject: string, body: string}>,
@@ -215,6 +216,7 @@ class EmailTemplateRegistry
                 'label' => 'Early adopters welcome mail',
                 'description' => 'One-off HTML mail naar handmatig opgegeven ontvanger. Geen wrapper, geen auto-signature — afsluiting zit in de HTML zelf.',
                 'format' => EmailTemplate::FORMAT_RAW_HTML,
+                'mailer' => 'postmark_broadcast',
                 'placeholders' => [],
                 'samples' => [],
                 'defaults' => [
@@ -234,6 +236,7 @@ class EmailTemplateRegistry
      *     label: string,
      *     description: string,
      *     format: string,
+     *     mailer?: string|null,
      *     placeholders: array<string, string>,
      *     samples: array<string, string>,
      *     defaults: array<string, array{subject: string, body: string}>,

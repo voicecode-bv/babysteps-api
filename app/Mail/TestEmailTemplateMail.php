@@ -18,7 +18,11 @@ class TestEmailTemplateMail extends Mailable
     public function __construct(
         public string $templateKey,
         public string $templateLocale,
-    ) {}
+    ) {
+        if ($mailer = EmailTemplateRegistry::get($this->templateKey)['mailer'] ?? null) {
+            $this->mailer($mailer);
+        }
+    }
 
     public function envelope(): Envelope
     {
@@ -32,7 +36,11 @@ class TestEmailTemplateMail extends Mailable
         if ($this->isRawHtml()) {
             return new Content(
                 view: 'emails.templated-html',
-                with: ['body' => $rendered['body']],
+                text: 'emails.templated-html-text',
+                with: [
+                    'body' => $rendered['body'],
+                    'text' => $this->htmlToPlainText($rendered['body']),
+                ],
             );
         }
 
@@ -74,5 +82,19 @@ class TestEmailTemplateMail extends Mailable
 
         return (EmailTemplateRegistry::get($this->templateKey)['format'] ?? EmailTemplate::FORMAT_MARKDOWN_MESSAGE)
             === EmailTemplate::FORMAT_RAW_HTML;
+    }
+
+    private function htmlToPlainText(string $html): string
+    {
+        $html = preg_replace('#<(script|style|head)[^>]*>.*?</\1>#is', '', $html) ?? $html;
+        $html = preg_replace('#<br\s*/?>#i', "\n", $html) ?? $html;
+        $html = preg_replace('#</(p|h[1-6]|li|div|tr)>#i', "\n\n", $html) ?? $html;
+
+        $text = html_entity_decode(strip_tags($html), ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $text = preg_replace('/[ \t]+/', ' ', $text) ?? $text;
+        $text = preg_replace('/\n[ \t]+/', "\n", $text) ?? $text;
+        $text = preg_replace('/\n{3,}/', "\n\n", $text) ?? $text;
+
+        return trim($text);
     }
 }

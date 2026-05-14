@@ -22,6 +22,7 @@ use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Notifications\Events\NotificationFailed;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\ServiceProvider;
 use MatanYadaev\EloquentSpatial\EloquentSpatial;
 use MatanYadaev\EloquentSpatial\Enums\Srid;
@@ -136,5 +137,9 @@ class AppServiceProvider extends ServiceProvider
                 .'/password-reset?token='.$token
                 .'&email='.urlencode($user->getEmailForPasswordReset());
         });
+
+        if ($replyToAddress = (string) config('mail.reply_to.address', '')) {
+            Mail::alwaysReplyTo($replyToAddress, (string) config('mail.reply_to.name', ''));
+        }
     }
 }

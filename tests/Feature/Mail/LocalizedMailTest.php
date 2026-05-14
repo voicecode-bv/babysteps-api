@@ -60,27 +60,55 @@ it('renders the mail in English for recipients whose locale is en', function () 
         ->and($email->getHtmlBody())->toContain('Hello!');
 });
 
-it('sends raw_html templates without the mail message wrapper or signature', function () {
+it('sends raw_html templates without the mail message wrapper, with a plain-text alternative, and via the broadcast mailer', function () {
+    config()->set('mail.mailers.postmark_broadcast', ['transport' => 'array']);
+    app('mail.manager')->forgetMailers();
+
     EmailTemplate::query()->where('key', EmailTemplateRegistry::EARLY_ADOPTERS)->update([
         'subject_nl' => 'Welkom bij Innerr',
-        'body_nl' => '<!doctype html><html><body><div class="pc-project-body">Hallo early adopter!</div></body></html>',
+        'body_nl' => '<!doctype html><html><body><h1>Welkom!</h1><p>Hallo early adopter.</p><div class="pc-project-body">Tot snel.</div></body></html>',
     ]);
 
-    Mail::to('jordan@example.test')->send(
-        new TestEmailTemplateMail(
-            templateKey: EmailTemplateRegistry::EARLY_ADOPTERS,
-            templateLocale: 'nl',
-        ),
+    $mailable = new TestEmailTemplateMail(
+        templateKey: EmailTemplateRegistry::EARLY_ADOPTERS,
+        templateLocale: 'nl',
     );
 
-    $email = app('mailer')->getSymfonyTransport()->messages()[0]->getOriginalMessage();
-    $body = $email->getHtmlBody();
+    expect($mailable->mailer)->toBe('postmark_broadcast');
+
+    Mail::mailer($mailable->mailer)->to('jordan@example.test')->send($mailable);
+
+    $email = app('mail.manager')->mailer('postmark_broadcast')->getSymfonyTransport()->messages()[0]->getOriginalMessage();
 
     expect($email->getSubject())->toBe('Welkom bij Innerr')
-        ->and($body)->toContain('pc-project-body')
-        ->and($body)->toContain('Hallo early adopter!')
-        ->and($body)->not->toContain('Groetjes,')
-        ->and($body)->not->toContain('innerr-logo.png');
+        ->and($email->getHtmlBody())->toContain('pc-project-body')
+        ->and($email->getHtmlBody())->not->toContain('Groetjes,')
+        ->and($email->getHtmlBody())->not->toContain('innerr-logo.png')
+        ->and($email->getTextBody())->toContain('Welkom!')
+        ->and($email->getTextBody())->toContain('Hallo early adopter.');
+});
+
+it('sets a Reply-To header on outgoing mail when configured', function () {
+    config()->set('mail.reply_to.address', 'hello@innerr.test');
+    config()->set('mail.reply_to.name', 'Innerr Support');
+
+    app('mail.manager')->forgetMailers();
+    Mail::alwaysReplyTo('hello@innerr.test', 'Innerr Support');
+
+    EmailTemplate::query()->where('key', EmailTemplateRegistry::CIRCLE_INVITATION)->update([
+        'subject_en' => 'Hi',
+        'body_en' => 'Hello world.',
+    ]);
+
+    Mail::to('jordan@example.test')->send(new TestEmailTemplateMail(
+        templateKey: EmailTemplateRegistry::CIRCLE_INVITATION,
+        templateLocale: 'en',
+    ));
+
+    $email = app('mailer')->getSymfonyTransport()->messages()[0]->getOriginalMessage();
+    $replyTo = $email->getReplyTo()[0] ?? null;
+
+    expect($replyTo?->getAddress())->toBe('hello@innerr.test');
 });
 
 it('compiles the mail button component when included in a template body', function () {

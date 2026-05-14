@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\EmailTemplates\Pages;
 
 use App\Filament\Resources\EmailTemplates\EmailTemplateResource;
+use App\Mail\EmailTemplates\EmailTemplateRegistry;
 use App\Mail\TestEmailTemplateMail;
 use App\Models\EmailTemplate;
 use Filament\Actions\Action;
@@ -46,7 +47,11 @@ class EditEmailTemplate extends EditRecord
                         ]),
                 ])
                 ->action(function (array $data, EmailTemplate $record): void {
-                    Mail::to($data['email'])->send(new TestEmailTemplateMail(
+                    $mailer = EmailTemplateRegistry::get($record->key)['mailer'] ?? null;
+
+                    $pending = $mailer ? Mail::mailer($mailer) : Mail::mailer();
+
+                    $pending->to($data['email'])->send(new TestEmailTemplateMail(
                         templateKey: $record->key,
                         templateLocale: $data['locale'],
                     ));
