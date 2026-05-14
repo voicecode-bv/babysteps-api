@@ -48,5 +48,6 @@ class DatabaseSeeder extends Seeder
         });
 
         $this->call(NotificationSeeder::class);
+        $this->call(EmailTemplateSeeder::class);
     }
 }

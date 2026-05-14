@@ -3,6 +3,8 @@
 namespace App\Notifications;
 
 use App\Enums\NotificationPreference;
+use App\Mail\EmailTemplates\EmailTemplateRegistry;
+use App\Mail\EmailTemplates\EmailTemplateRenderer;
 use App\Models\CircleOwnershipTransfer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -36,16 +38,18 @@ class CircleOwnershipTransferDeclinedNotification extends Notification implement
 
     public function toMail(object $notifiable): MailMessage
     {
-        $toName = $this->transfer->toUser->name;
-        $circleName = $this->transfer->circle->name;
+        $rendered = app(EmailTemplateRenderer::class)->render(
+            EmailTemplateRegistry::CIRCLE_OWNERSHIP_TRANSFER_DECLINED,
+            [
+                'recipient_name' => $notifiable->name,
+                'to_name' => $this->transfer->toUser->name,
+                'circle_name' => $this->transfer->circle->name,
+            ],
+        );
 
         return (new MailMessage)
-            ->subject(__(':name declined ownership of :circle', ['name' => $toName, 'circle' => $circleName]))
-            ->greeting(__('Hello :name!', ['name' => $notifiable->name]))
-            ->line(__(':name declined the ownership transfer of the circle ":circle". You remain the owner.', [
-                'name' => $toName,
-                'circle' => $circleName,
-            ]));
+            ->subject($rendered['subject'])
+            ->markdown('emails.templated', ['body' => $rendered['body']]);
     }
 
     public function toFcm(object $notifiable): FcmMessage

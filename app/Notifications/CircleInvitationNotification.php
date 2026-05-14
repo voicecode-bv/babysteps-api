@@ -2,6 +2,8 @@
 
 namespace App\Notifications;
 
+use App\Mail\EmailTemplates\EmailTemplateRegistry;
+use App\Mail\EmailTemplates\EmailTemplateRenderer;
 use App\Models\CircleInvitation;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -26,12 +28,15 @@ class CircleInvitationNotification extends Notification implements ShouldQueue
 
     public function toMail(object $notifiable): MailMessage
     {
-        $inviterName = $this->invitation->inviter->name;
+        $rendered = app(EmailTemplateRenderer::class)->render(
+            EmailTemplateRegistry::CIRCLE_INVITATION,
+            [
+                'inviter_name' => $this->invitation->inviter->name,
+            ],
+        );
 
         return (new MailMessage)
-            ->subject(__(':name has invited you', ['name' => $inviterName]))
-            ->greeting(__('Hello!'))
-            ->line(__(':name has invited you to join their circles.', ['name' => $inviterName]))
-            ->line(__("If you don't have an account yet, please register first."));
+            ->subject($rendered['subject'])
+            ->markdown('emails.templated', ['body' => $rendered['body']]);
     }
 }

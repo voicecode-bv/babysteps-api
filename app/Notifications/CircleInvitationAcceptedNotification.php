@@ -3,6 +3,8 @@
 namespace App\Notifications;
 
 use App\Enums\NotificationPreference;
+use App\Mail\EmailTemplates\EmailTemplateRegistry;
+use App\Mail\EmailTemplates\EmailTemplateRenderer;
 use App\Models\CircleInvitation;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -72,14 +74,16 @@ class CircleInvitationAcceptedNotification extends Notification implements Shoul
 
     public function toMail(object $notifiable): MailMessage
     {
-        $circleName = $this->invitation->circle->name;
+        $rendered = app(EmailTemplateRenderer::class)->render(
+            EmailTemplateRegistry::CIRCLE_INVITATION_ACCEPTED,
+            [
+                'accepted_by_name' => $this->acceptedByName,
+                'circle_name' => $this->invitation->circle->name,
+            ],
+        );
 
         return (new MailMessage)
-            ->subject(__(':name has joined :circle', ['name' => $this->acceptedByName, 'circle' => $circleName]))
-            ->greeting(__('Good news!'))
-            ->line(__(':name has accepted your invitation and joined the circle ":circle".', [
-                'name' => $this->acceptedByName,
-                'circle' => $circleName,
-            ]));
+            ->subject($rendered['subject'])
+            ->markdown('emails.templated', ['body' => $rendered['body']]);
     }
 }

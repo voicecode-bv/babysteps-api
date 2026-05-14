@@ -2,6 +2,8 @@
 
 namespace App\Notifications;
 
+use App\Mail\EmailTemplates\EmailTemplateRegistry;
+use App\Mail\EmailTemplates\EmailTemplateRenderer;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
@@ -27,15 +29,19 @@ class GdprExportReady extends Notification implements ShouldQueue
     public function toMail(object $notifiable): MailMessage
     {
         $hours = (int) config('gdpr.export.expiry_hours');
-
         $url = Storage::temporaryUrl($this->path, now()->addHours($hours));
 
+        $rendered = app(EmailTemplateRenderer::class)->render(
+            EmailTemplateRegistry::GDPR_EXPORT_READY,
+            [
+                'recipient_name' => $notifiable->name,
+                'download_url' => $url,
+                'hours' => $hours,
+            ],
+        );
+
         return (new MailMessage)
-            ->subject(__('Your data export is ready'))
-            ->greeting(__('Hello :name!', ['name' => $notifiable->name]))
-            ->line(__('Your personal data export is ready to download.'))
-            ->action(__('Download your data'), $url)
-            ->line(__('This link expires in :hours hours.', ['hours' => $hours]))
-            ->line(__('If you did not request this, you can ignore this email.'));
+            ->subject($rendered['subject'])
+            ->markdown('emails.templated', ['body' => $rendered['body']]);
     }
 }

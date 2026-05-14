@@ -34,8 +34,7 @@ it('renders mail notifications in the recipient preferred locale', function () {
         ->and($body)->toContain('Hallo '.$user->name)
         ->and($body)->toContain('Je persoonlijke data-export staat klaar om te downloaden.')
         ->and($body)->toContain('Download je gegevens')
-        ->and($body)->toContain('Groet,')
-        ->and($body)->toContain('Werkt de');
+        ->and($body)->toContain('Groet,');
 });
 
 it('renders the mail in English for recipients whose locale is en', function () {
