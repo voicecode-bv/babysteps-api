@@ -77,6 +77,7 @@ class CircleInvitationAcceptedNotification extends Notification implements Shoul
         $rendered = app(EmailTemplateRenderer::class)->render(
             EmailTemplateRegistry::CIRCLE_INVITATION_ACCEPTED,
             [
+                'recipient_name' => $notifiable->name,
                 'accepted_by_name' => $this->acceptedByName,
                 'circle_name' => $this->invitation->circle->name,
             ],

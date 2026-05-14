@@ -95,6 +95,7 @@ it('localizes the circle invitation accepted mail to the recipient locale', func
     $email = app('mailer')->getSymfonyTransport()->messages()[0]->getOriginalMessage();
 
     expect($email->getSubject())->toBe('Alice is lid geworden van Family')
-        ->and($email->getHtmlBody())->toContain('Goed nieuws!')
+        ->and($email->getHtmlBody())->toContain('Hallo '.$inviter->name)
+        ->and($email->getHtmlBody())->toContain('Goed nieuws: Alice heeft je uitnodiging geaccepteerd')
         ->and($email->getHtmlBody())->toContain('is lid geworden van de kring "Family"');
 });

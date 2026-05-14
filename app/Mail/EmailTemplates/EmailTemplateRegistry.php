@@ -59,25 +59,27 @@ class EmailTemplateRegistry
                 'label' => 'Circle invitation accepted',
                 'description' => 'Sent to the inviter when someone accepts their circle invitation.',
                 'placeholders' => [
+                    'recipient_name' => 'Name of the recipient (the inviter).',
                     'accepted_by_name' => 'Name of the user who accepted the invitation.',
                     'circle_name' => 'Name of the circle.',
                 ],
                 'samples' => [
+                    'recipient_name' => 'Jordan',
                     'accepted_by_name' => 'Sophie de Vries',
                     'circle_name' => 'Family',
                 ],
                 'defaults' => [
                     'nl' => [
                         'subject' => '{accepted_by_name} is lid geworden van {circle_name}',
-                        'body' => "# Goed nieuws!\n\n{accepted_by_name} heeft je uitnodiging geaccepteerd en is lid geworden van de kring \"{circle_name}\".",
+                        'body' => "# Hallo {recipient_name}!\n\nGoed nieuws: {accepted_by_name} heeft je uitnodiging geaccepteerd en is lid geworden van de kring \"{circle_name}\".",
                     ],
                     'en' => [
                         'subject' => '{accepted_by_name} has joined {circle_name}',
-                        'body' => "# Good news!\n\n{accepted_by_name} has accepted your invitation and joined the circle \"{circle_name}\".",
+                        'body' => "# Hello {recipient_name}!\n\nGood news: {accepted_by_name} has accepted your invitation and joined the circle \"{circle_name}\".",
                     ],
                     'fr' => [
                         'subject' => '{accepted_by_name} a rejoint {circle_name}',
-                        'body' => "# Bonne nouvelle !\n\n{accepted_by_name} a accepté votre invitation et a rejoint le cercle \"{circle_name}\".",
+                        'body' => "# Bonjour {recipient_name} !\n\nBonne nouvelle : {accepted_by_name} a accepté votre invitation et a rejoint le cercle \"{circle_name}\".",
                     ],
                 ],
             ],
