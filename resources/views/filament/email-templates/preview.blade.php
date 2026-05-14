@@ -1,4 +1,5 @@
 @php
+    use App\Mail\EmailTemplates\EmailSignature;
     use App\Mail\EmailTemplates\EmailTemplateRegistry;
     use Illuminate\Mail\Markdown;
     use Illuminate\Support\Facades\App;
@@ -12,25 +13,33 @@
         ? (EmailTemplateRegistry::get($record->key)['samples'] ?? [])
         : [];
 
+    $samples['innerr_name'] = EmailSignature::randomName();
+
     $tokens = [];
     foreach ($samples as $name => $value) {
         $tokens['{'.$name.'}'] = (string) $value;
     }
 
-    $previewSubject = $tokens === [] ? $subject : strtr($subject, $tokens);
-    $previewBody = $tokens === [] ? $body : strtr($body, $tokens);
+    $bodyWithSignature = $body === ''
+        ? EmailSignature::template($locale)
+        : rtrim($body)."\n\n".EmailSignature::template($locale);
+
+    $previewSubject = strtr($subject, $tokens);
+    $previewBody = strtr($bodyWithSignature, $tokens);
 
     $previewHtml = '';
     $renderError = null;
 
     if ($previewBody !== '') {
+        $originalLocale = App::getLocale();
+
         try {
-            $previewHtml = App::setLocale($locale, fn () => (string) app(Markdown::class)->render(
-                'emails.templated',
-                ['body' => $previewBody],
-            ));
+            App::setLocale($locale);
+            $previewHtml = (string) app(Markdown::class)->render('emails.templated', ['body' => $previewBody]);
         } catch (\Throwable $e) {
             $renderError = $e->getMessage();
+        } finally {
+            App::setLocale($originalLocale);
         }
     }
 @endphp
@@ -66,9 +75,12 @@
         @else
             <iframe
                 title="Email preview"
-                sandbox="allow-same-origin"
+                sandbox="allow-scripts"
                 srcdoc="{{ $previewHtml }}"
-                class="h-[720px] w-full border-0 bg-white"
+                width="800"
+                height="800"
+                class="block border-0 bg-white"
+                style="width: 800px; height: 800px;"
             ></iframe>
         @endif
     </div>

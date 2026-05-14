@@ -32,6 +32,7 @@ class CircleInvitationNotification extends Notification implements ShouldQueue
             EmailTemplateRegistry::CIRCLE_INVITATION,
             [
                 'inviter_name' => $this->invitation->inviter->name,
+                'circle_name' => $this->invitation->circle->name,
             ],
         );
 

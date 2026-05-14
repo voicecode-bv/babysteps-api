@@ -6,7 +6,6 @@ use App\Mail\EmailTemplates\EmailTemplateRegistry;
 use App\Models\EmailTemplate;
 use Filament\Forms\Components\MarkdownEditor;
 use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -60,21 +59,19 @@ class EmailTemplateForm
                     ->live(onBlur: true)
                     ->columnSpanFull(),
 
-                Grid::make(2)
-                    ->columnSpanFull()
-                    ->schema([
-                        MarkdownEditor::make($bodyField)
-                            ->label('Body (markdown)')
-                            ->required()
-                            ->live(debounce: 500)
-                            ->disableToolbarButtons(['attachFiles']),
+                MarkdownEditor::make($bodyField)
+                    ->label('Body (markdown)')
+                    ->required()
+                    ->live(debounce: 500)
+                    ->disableToolbarButtons(['attachFiles'])
+                    ->columnSpanFull(),
 
-                        View::make('filament.email-templates.preview')
-                            ->viewData(fn (Get $get) => [
-                                'subject' => (string) ($get($subjectField) ?? ''),
-                                'body' => (string) ($get($bodyField) ?? ''),
-                                'locale' => $locale,
-                            ]),
+                View::make('filament.email-templates.preview')
+                    ->columnSpanFull()
+                    ->viewData(fn (Get $get) => [
+                        'subject' => (string) ($get($subjectField) ?? ''),
+                        'body' => (string) ($get($bodyField) ?? ''),
+                        'locale' => $locale,
                     ]),
             ]);
     }

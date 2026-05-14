@@ -20,6 +20,10 @@ class EmailTemplateRenderer
             ? [$template->subjectFor($locale), $template->bodyFor($locale)]
             : $this->defaults($key, $locale);
 
+        $body = $this->appendSignature($body, $locale);
+
+        $placeholders['innerr_name'] = EmailSignature::randomName();
+
         return [
             'subject' => $this->replacePlaceholders($subject, $placeholders),
             'body' => $this->replacePlaceholders($body, $placeholders),
@@ -42,6 +46,17 @@ class EmailTemplateRenderer
             ?? ['subject' => '', 'body' => ''];
 
         return [(string) $defaults['subject'], (string) $defaults['body']];
+    }
+
+    private function appendSignature(string $body, string $locale): string
+    {
+        $signature = EmailSignature::template($locale);
+
+        if ($body === '') {
+            return $signature;
+        }
+
+        return rtrim($body)."\n\n".$signature;
     }
 
     /**

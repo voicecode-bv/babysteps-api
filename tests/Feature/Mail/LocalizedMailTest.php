@@ -1,7 +1,9 @@
 <?php
 
+use App\Mail\EmailTemplates\EmailTemplateRegistry;
 use App\Models\Circle;
 use App\Models\CircleInvitation;
+use App\Models\EmailTemplate;
 use App\Models\User;
 use App\Notifications\CircleInvitationAcceptedNotification;
 use App\Notifications\CircleInvitationNotification;
@@ -34,7 +36,8 @@ it('renders mail notifications in the recipient preferred locale', function () {
         ->and($body)->toContain('Hallo '.$user->name)
         ->and($body)->toContain('Je persoonlijke data-export staat klaar om te downloaden.')
         ->and($body)->toContain('Download je gegevens')
-        ->and($body)->toContain('Groet,');
+        ->and($body)->toContain('Groetjes,')
+        ->and($body)->toMatch('/(Nicky|Michael) van Innerr/');
 });
 
 it('renders the mail in English for recipients whose locale is en', function () {
@@ -53,6 +56,28 @@ it('renders the mail in English for recipients whose locale is en', function () 
 
     expect($email->getSubject())->toContain('has invited you')
         ->and($email->getHtmlBody())->toContain('Hello!');
+});
+
+it('compiles the mail button component when included in a template body', function () {
+    EmailTemplate::query()
+        ->where('key', EmailTemplateRegistry::GDPR_EXPORT_READY)
+        ->update([
+            'body_en' => "# Hi\n\nYour export is ready.\n\n<x-mail::button url=\"{download_url}\">Download your data</x-mail::button>",
+        ]);
+
+    config()->set('gdpr.export.directory', 'gdpr-exports');
+    Storage::fake();
+    Storage::put('gdpr-exports/1/fake.zip', 'x');
+
+    $user = User::factory()->create(['locale' => 'en']);
+    $user->notify(new GdprExportReady('gdpr-exports/1/fake.zip'));
+
+    $body = app('mailer')->getSymfonyTransport()->messages()[0]->getOriginalMessage()->getHtmlBody();
+
+    expect($body)
+        ->toContain('class="button button-primary"')
+        ->toContain('Download your data')
+        ->not->toContain('x-mail::button');
 });
 
 it('localizes the circle invitation accepted mail to the recipient locale', function () {

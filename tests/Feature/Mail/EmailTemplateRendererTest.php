@@ -19,7 +19,9 @@ it('renders the requested locale and replaces placeholders', function () {
     );
 
     expect($rendered['subject'])->toBe('Sophie heeft je uitgenodigd')
-        ->and($rendered['body'])->toBe('Hallo, Sophie heeft je uitgenodigd.');
+        ->and($rendered['body'])->toStartWith('Hallo, Sophie heeft je uitgenodigd.')
+        ->and($rendered['body'])->toContain('Groetjes,')
+        ->and($rendered['body'])->toMatch('/(Nicky|Michael) van Innerr/');
 });
 
 it('falls back to english when the requested locale is empty', function () {
@@ -37,7 +39,9 @@ it('falls back to english when the requested locale is empty', function () {
     );
 
     expect($rendered['subject'])->toBe('Sophie has invited you')
-        ->and($rendered['body'])->toBe('Hello, Sophie has invited you.');
+        ->and($rendered['body'])->toStartWith('Hello, Sophie has invited you.')
+        ->and($rendered['body'])->toContain('À bientôt,')
+        ->and($rendered['body'])->toMatch('/(Nicky|Michael) de Innerr/');
 });
 
 it('falls back to registry defaults when no database row exists', function () {
@@ -45,15 +49,17 @@ it('falls back to registry defaults when no database row exists', function () {
 
     $rendered = app(EmailTemplateRenderer::class)->render(
         EmailTemplateRegistry::CIRCLE_INVITATION,
-        ['inviter_name' => 'Sophie'],
+        ['inviter_name' => 'Sophie', 'circle_name' => 'Family'],
         'en',
     );
 
-    expect($rendered['subject'])->toBe('Sophie has invited you')
-        ->and($rendered['body'])->toContain('Sophie has invited you to join their circles.');
+    expect($rendered['subject'])->toBe('Sophie has invited you to Family')
+        ->and($rendered['body'])->toContain('Sophie has invited you to join the circle "Family"')
+        ->and($rendered['body'])->toContain('Cheers,')
+        ->and($rendered['body'])->toMatch('/(Nicky|Michael) from Innerr/');
 });
 
-it('leaves unknown placeholders untouched', function () {
+it('leaves unknown placeholders untouched but always fills innerr_name', function () {
     EmailTemplate::query()->where('key', EmailTemplateRegistry::CIRCLE_INVITATION)->update([
         'subject_en' => '{inviter_name} invited {nonexistent}',
         'body_en' => 'Body {missing}.',
@@ -66,5 +72,7 @@ it('leaves unknown placeholders untouched', function () {
     );
 
     expect($rendered['subject'])->toBe('Sophie invited {nonexistent}')
-        ->and($rendered['body'])->toBe('Body {missing}.');
+        ->and($rendered['body'])->toStartWith('Body {missing}.')
+        ->and($rendered['body'])->not->toContain('{innerr_name}')
+        ->and($rendered['body'])->toMatch('/(Nicky|Michael) from Innerr/');
 });

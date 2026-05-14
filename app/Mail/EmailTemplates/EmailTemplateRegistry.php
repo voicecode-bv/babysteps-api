@@ -33,22 +33,24 @@ class EmailTemplateRegistry
                 'description' => 'Sent to an email address that does not yet have an account when someone invites them.',
                 'placeholders' => [
                     'inviter_name' => 'Name of the person sending the invitation.',
+                    'circle_name' => 'Name of the circle the recipient is invited to.',
                 ],
                 'samples' => [
                     'inviter_name' => 'Sophie de Vries',
+                    'circle_name' => 'Family',
                 ],
                 'defaults' => [
                     'nl' => [
-                        'subject' => '{inviter_name} heeft je uitgenodigd',
-                        'body' => "# Hallo!\n\n{inviter_name} heeft je uitgenodigd om lid te worden van hun kringen.\n\nHeb je nog geen account? Registreer je dan eerst.\n\nGroet,\nInnerr",
+                        'subject' => '{inviter_name} heeft je uitgenodigd voor {circle_name}',
+                        'body' => "# Hallo!\n\n{inviter_name} heeft je uitgenodigd om lid te worden van de kring \"{circle_name}\".\n\nHeb je nog geen account? Registreer je dan eerst.",
                     ],
                     'en' => [
-                        'subject' => '{inviter_name} has invited you',
-                        'body' => "# Hello!\n\n{inviter_name} has invited you to join their circles.\n\nIf you don't have an account yet, please register first.\n\nRegards,\nInnerr",
+                        'subject' => '{inviter_name} has invited you to {circle_name}',
+                        'body' => "# Hello!\n\n{inviter_name} has invited you to join the circle \"{circle_name}\".\n\nIf you don't have an account yet, please register first.",
                     ],
                     'fr' => [
-                        'subject' => '{inviter_name} vous a invité',
-                        'body' => "# Bonjour !\n\n{inviter_name} vous a invité à rejoindre ses cercles.\n\nSi vous n'avez pas encore de compte, veuillez d'abord vous inscrire.\n\nCordialement,\nInnerr",
+                        'subject' => '{inviter_name} vous a invité à rejoindre {circle_name}',
+                        'body' => "# Bonjour !\n\n{inviter_name} vous a invité à rejoindre le cercle « {circle_name} ».\n\nSi vous n'avez pas encore de compte, veuillez d'abord vous inscrire.",
                     ],
                 ],
             ],
@@ -67,15 +69,15 @@ class EmailTemplateRegistry
                 'defaults' => [
                     'nl' => [
                         'subject' => '{accepted_by_name} is lid geworden van {circle_name}',
-                        'body' => "# Goed nieuws!\n\n{accepted_by_name} heeft je uitnodiging geaccepteerd en is lid geworden van de kring \"{circle_name}\".\n\nGroet,\nInnerr",
+                        'body' => "# Goed nieuws!\n\n{accepted_by_name} heeft je uitnodiging geaccepteerd en is lid geworden van de kring \"{circle_name}\".",
                     ],
                     'en' => [
                         'subject' => '{accepted_by_name} has joined {circle_name}',
-                        'body' => "# Good news!\n\n{accepted_by_name} has accepted your invitation and joined the circle \"{circle_name}\".\n\nRegards,\nInnerr",
+                        'body' => "# Good news!\n\n{accepted_by_name} has accepted your invitation and joined the circle \"{circle_name}\".",
                     ],
                     'fr' => [
                         'subject' => '{accepted_by_name} a rejoint {circle_name}',
-                        'body' => "# Bonne nouvelle !\n\n{accepted_by_name} a accepté votre invitation et a rejoint le cercle \"{circle_name}\".\n\nCordialement,\nInnerr",
+                        'body' => "# Bonne nouvelle !\n\n{accepted_by_name} a accepté votre invitation et a rejoint le cercle \"{circle_name}\".",
                     ],
                 ],
             ],
@@ -96,15 +98,15 @@ class EmailTemplateRegistry
                 'defaults' => [
                     'nl' => [
                         'subject' => '{from_name} wil "{circle_name}" aan jou overdragen',
-                        'body' => "# Hallo {recipient_name}!\n\n{from_name} wil het eigenaarschap van de kring \"{circle_name}\" aan jou overdragen.\n\nOpen de app om dit verzoek te accepteren of te weigeren.\n\nGroet,\nInnerr",
+                        'body' => "# Hallo {recipient_name}!\n\n{from_name} wil het eigenaarschap van de kring \"{circle_name}\" aan jou overdragen.\n\nOpen de app om dit verzoek te accepteren of te weigeren.",
                     ],
                     'en' => [
                         'subject' => '{from_name} wants to transfer "{circle_name}" to you',
-                        'body' => "# Hello {recipient_name}!\n\n{from_name} wants to transfer ownership of the circle \"{circle_name}\" to you.\n\nOpen the app to accept or decline this request.\n\nRegards,\nInnerr",
+                        'body' => "# Hello {recipient_name}!\n\n{from_name} wants to transfer ownership of the circle \"{circle_name}\" to you.\n\nOpen the app to accept or decline this request.",
                     ],
                     'fr' => [
                         'subject' => '{from_name} souhaite vous transférer "{circle_name}"',
-                        'body' => "# Bonjour {recipient_name} !\n\n{from_name} souhaite vous transférer la propriété du cercle \"{circle_name}\".\n\nOuvrez l'application pour accepter ou refuser cette demande.\n\nCordialement,\nInnerr",
+                        'body' => "# Bonjour {recipient_name} !\n\n{from_name} souhaite vous transférer la propriété du cercle \"{circle_name}\".\n\nOuvrez l'application pour accepter ou refuser cette demande.",
                     ],
                 ],
             ],
@@ -125,15 +127,15 @@ class EmailTemplateRegistry
                 'defaults' => [
                     'nl' => [
                         'subject' => '{to_name} is nu de eigenaar van {circle_name}',
-                        'body' => "# Hallo {recipient_name}!\n\n{to_name} heeft je eigenaarschap overdracht geaccepteerd en is nu de eigenaar van de kring \"{circle_name}\".\n\nGroet,\nInnerr",
+                        'body' => "# Hallo {recipient_name}!\n\n{to_name} heeft je eigenaarschap overdracht geaccepteerd en is nu de eigenaar van de kring \"{circle_name}\".",
                     ],
                     'en' => [
                         'subject' => '{to_name} is now the owner of {circle_name}',
-                        'body' => "# Hello {recipient_name}!\n\n{to_name} accepted your ownership transfer and is now the owner of the circle \"{circle_name}\".\n\nRegards,\nInnerr",
+                        'body' => "# Hello {recipient_name}!\n\n{to_name} accepted your ownership transfer and is now the owner of the circle \"{circle_name}\".",
                     ],
                     'fr' => [
                         'subject' => '{to_name} est désormais propriétaire de {circle_name}',
-                        'body' => "# Bonjour {recipient_name} !\n\n{to_name} a accepté votre transfert de propriété et est désormais le propriétaire du cercle \"{circle_name}\".\n\nCordialement,\nInnerr",
+                        'body' => "# Bonjour {recipient_name} !\n\n{to_name} a accepté votre transfert de propriété et est désormais le propriétaire du cercle \"{circle_name}\".",
                     ],
                 ],
             ],
@@ -154,15 +156,15 @@ class EmailTemplateRegistry
                 'defaults' => [
                     'nl' => [
                         'subject' => '{to_name} heeft het eigenaarschap van {circle_name} geweigerd',
-                        'body' => "# Hallo {recipient_name}!\n\n{to_name} heeft de eigenaarschap overdracht van de kring \"{circle_name}\" geweigerd. Jij blijft de eigenaar.\n\nGroet,\nInnerr",
+                        'body' => "# Hallo {recipient_name}!\n\n{to_name} heeft de eigenaarschap overdracht van de kring \"{circle_name}\" geweigerd. Jij blijft de eigenaar.",
                     ],
                     'en' => [
                         'subject' => '{to_name} declined ownership of {circle_name}',
-                        'body' => "# Hello {recipient_name}!\n\n{to_name} declined the ownership transfer of the circle \"{circle_name}\". You remain the owner.\n\nRegards,\nInnerr",
+                        'body' => "# Hello {recipient_name}!\n\n{to_name} declined the ownership transfer of the circle \"{circle_name}\". You remain the owner.",
                     ],
                     'fr' => [
                         'subject' => '{to_name} a refusé la propriété de {circle_name}',
-                        'body' => "# Bonjour {recipient_name} !\n\n{to_name} a refusé le transfert de propriété du cercle \"{circle_name}\". Vous restez le propriétaire.\n\nCordialement,\nInnerr",
+                        'body' => "# Bonjour {recipient_name} !\n\n{to_name} a refusé le transfert de propriété du cercle \"{circle_name}\". Vous restez le propriétaire.",
                     ],
                 ],
             ],
@@ -183,15 +185,15 @@ class EmailTemplateRegistry
                 'defaults' => [
                     'nl' => [
                         'subject' => 'Je data-export staat klaar',
-                        'body' => "# Hallo {recipient_name}!\n\nJe persoonlijke data-export staat klaar om te downloaden.\n\n[Download je gegevens]({download_url})\n\nDeze link verloopt over {hours} uur.\n\nHeb je dit niet aangevraagd? Dan kun je deze e-mail negeren.\n\nGroet,\nInnerr",
+                        'body' => "# Hallo {recipient_name}!\n\nJe persoonlijke data-export staat klaar om te downloaden.\n\n[Download je gegevens]({download_url})\n\nDeze link verloopt over {hours} uur.\n\nHeb je dit niet aangevraagd? Dan kun je deze e-mail negeren.",
                     ],
                     'en' => [
                         'subject' => 'Your data export is ready',
-                        'body' => "# Hello {recipient_name}!\n\nYour personal data export is ready to download.\n\n[Download your data]({download_url})\n\nThis link expires in {hours} hours.\n\nIf you did not request this, you can ignore this email.\n\nRegards,\nInnerr",
+                        'body' => "# Hello {recipient_name}!\n\nYour personal data export is ready to download.\n\n[Download your data]({download_url})\n\nThis link expires in {hours} hours.\n\nIf you did not request this, you can ignore this email.",
                     ],
                     'fr' => [
                         'subject' => 'Votre export de données est prêt',
-                        'body' => "# Bonjour {recipient_name} !\n\nVotre export de données personnelles est prêt à être téléchargé.\n\n[Télécharger vos données]({download_url})\n\nCe lien expire dans {hours} heures.\n\nSi vous n'avez pas fait cette demande, vous pouvez ignorer cet e-mail.\n\nCordialement,\nInnerr",
+                        'body' => "# Bonjour {recipient_name} !\n\nVotre export de données personnelles est prêt à être téléchargé.\n\n[Télécharger vos données]({download_url})\n\nCe lien expire dans {hours} heures.\n\nSi vous n'avez pas fait cette demande, vous pouvez ignorer cet e-mail.",
                     ],
                 ],
             ],
