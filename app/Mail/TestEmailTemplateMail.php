@@ -4,6 +4,7 @@ namespace App\Mail;
 
 use App\Mail\EmailTemplates\EmailTemplateRegistry;
 use App\Mail\EmailTemplates\EmailTemplateRenderer;
+use App\Models\EmailTemplate;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -26,11 +27,18 @@ class TestEmailTemplateMail extends Mailable
 
     public function content(): Content
     {
+        $rendered = $this->renderForLocale();
+
+        if ($this->isRawHtml()) {
+            return new Content(
+                view: 'emails.templated-html',
+                with: ['body' => $rendered['body']],
+            );
+        }
+
         return new Content(
             markdown: 'emails.templated',
-            with: [
-                'body' => $this->renderForLocale()['body'],
-            ],
+            with: ['body' => $rendered['body']],
         );
     }
 
@@ -54,5 +62,17 @@ class TestEmailTemplateMail extends Mailable
         } finally {
             App::setLocale($original);
         }
+    }
+
+    private function isRawHtml(): bool
+    {
+        $template = EmailTemplate::query()->where('key', $this->templateKey)->first();
+
+        if ($template instanceof EmailTemplate) {
+            return $template->isRawHtml();
+        }
+
+        return (EmailTemplateRegistry::get($this->templateKey)['format'] ?? EmailTemplate::FORMAT_MARKDOWN_MESSAGE)
+            === EmailTemplate::FORMAT_RAW_HTML;
     }
 }

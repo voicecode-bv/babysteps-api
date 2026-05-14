@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Model;
     'key',
     'subject_nl', 'subject_en', 'subject_fr',
     'body_nl', 'body_en', 'body_fr',
+    'body_format',
 ])]
 class EmailTemplate extends Model
 {
@@ -19,6 +20,15 @@ class EmailTemplate extends Model
     public const SUPPORTED_LOCALES = ['nl', 'en', 'fr'];
 
     public const FALLBACK_LOCALE = 'en';
+
+    public const FORMAT_MARKDOWN_MESSAGE = 'markdown_message';
+
+    public const FORMAT_RAW_HTML = 'raw_html';
+
+    public function isRawHtml(): bool
+    {
+        return $this->body_format === self::FORMAT_RAW_HTML;
+    }
 
     public function subjectFor(?string $locale): string
     {

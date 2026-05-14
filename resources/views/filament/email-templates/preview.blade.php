@@ -9,37 +9,46 @@
     /** @var string $locale */
 
     $record = $this->getRecord();
+    $isRawHtml = $record?->isRawHtml() ?? false;
+
     $samples = $record
         ? (EmailTemplateRegistry::get($record->key)['samples'] ?? [])
         : [];
 
-    $samples['innerr_name'] = EmailSignature::randomName();
+    if (! $isRawHtml) {
+        $samples['innerr_name'] = EmailSignature::randomName();
+    }
 
     $tokens = [];
     foreach ($samples as $name => $value) {
         $tokens['{'.$name.'}'] = (string) $value;
     }
 
-    $bodyWithSignature = $body === ''
-        ? EmailSignature::template($locale)
-        : rtrim($body)."\n\n".EmailSignature::template($locale);
-
     $previewSubject = strtr($subject, $tokens);
-    $previewBody = strtr($bodyWithSignature, $tokens);
 
     $previewHtml = '';
     $renderError = null;
 
-    if ($previewBody !== '') {
-        $originalLocale = App::getLocale();
+    if ($isRawHtml) {
+        $previewHtml = $body;
+    } else {
+        $bodyWithSignature = $body === ''
+            ? EmailSignature::template($locale)
+            : rtrim($body)."\n\n".EmailSignature::template($locale);
 
-        try {
-            App::setLocale($locale);
-            $previewHtml = (string) app(Markdown::class)->render('emails.templated', ['body' => $previewBody]);
-        } catch (\Throwable $e) {
-            $renderError = $e->getMessage();
-        } finally {
-            App::setLocale($originalLocale);
+        $previewBody = strtr($bodyWithSignature, $tokens);
+
+        if ($previewBody !== '') {
+            $originalLocale = App::getLocale();
+
+            try {
+                App::setLocale($locale);
+                $previewHtml = (string) app(Markdown::class)->render('emails.templated', ['body' => $previewBody]);
+            } catch (\Throwable $e) {
+                $renderError = $e->getMessage();
+            } finally {
+                App::setLocale($originalLocale);
+            }
         }
     }
 @endphp
@@ -49,7 +58,7 @@
         <div class="text-xs font-medium uppercase tracking-wide text-gray-500 dark:text-gray-400">
             Live preview ({{ strtoupper($locale) }})
         </div>
-        @if (! empty($samples))
+        @if (! $isRawHtml && ! empty($samples))
             <div class="text-xs text-gray-500 dark:text-gray-400">
                 Placeholders shown with sample values.
             </div>

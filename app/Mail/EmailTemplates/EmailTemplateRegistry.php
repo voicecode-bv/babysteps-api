@@ -2,6 +2,8 @@
 
 namespace App\Mail\EmailTemplates;
 
+use App\Models\EmailTemplate;
+
 class EmailTemplateRegistry
 {
     public const CIRCLE_INVITATION = 'circle_invitation';
@@ -16,10 +18,13 @@ class EmailTemplateRegistry
 
     public const GDPR_EXPORT_READY = 'gdpr_export_ready';
 
+    public const EARLY_ADOPTERS = 'early_adopters';
+
     /**
      * @return array<string, array{
      *     label: string,
      *     description: string,
+     *     format: string,
      *     placeholders: array<string, string>,
      *     samples: array<string, string>,
      *     defaults: array<string, array{subject: string, body: string}>,
@@ -31,6 +36,7 @@ class EmailTemplateRegistry
             self::CIRCLE_INVITATION => [
                 'label' => 'Circle invitation (non-user)',
                 'description' => 'Sent to an email address that does not yet have an account when someone invites them.',
+                'format' => EmailTemplate::FORMAT_MARKDOWN_MESSAGE,
                 'placeholders' => [
                     'inviter_name' => 'Name of the person sending the invitation.',
                     'circle_name' => 'Name of the circle the recipient is invited to.',
@@ -58,6 +64,7 @@ class EmailTemplateRegistry
             self::CIRCLE_INVITATION_ACCEPTED => [
                 'label' => 'Circle invitation accepted',
                 'description' => 'Sent to the inviter when someone accepts their circle invitation.',
+                'format' => EmailTemplate::FORMAT_MARKDOWN_MESSAGE,
                 'placeholders' => [
                     'recipient_name' => 'Name of the recipient (the inviter).',
                     'accepted_by_name' => 'Name of the user who accepted the invitation.',
@@ -87,6 +94,7 @@ class EmailTemplateRegistry
             self::CIRCLE_OWNERSHIP_TRANSFER_REQUESTED => [
                 'label' => 'Circle ownership transfer requested',
                 'description' => 'Sent when the current owner of a circle requests an ownership transfer to another member.',
+                'format' => EmailTemplate::FORMAT_MARKDOWN_MESSAGE,
                 'placeholders' => [
                     'recipient_name' => 'Name of the recipient (the user receiving the email).',
                     'from_name' => 'Name of the current owner who initiated the transfer.',
@@ -116,6 +124,7 @@ class EmailTemplateRegistry
             self::CIRCLE_OWNERSHIP_TRANSFER_ACCEPTED => [
                 'label' => 'Circle ownership transfer accepted',
                 'description' => 'Sent to the previous owner when the recipient accepts the ownership transfer.',
+                'format' => EmailTemplate::FORMAT_MARKDOWN_MESSAGE,
                 'placeholders' => [
                     'recipient_name' => 'Name of the recipient (the previous owner).',
                     'to_name' => 'Name of the user who accepted ownership.',
@@ -145,6 +154,7 @@ class EmailTemplateRegistry
             self::CIRCLE_OWNERSHIP_TRANSFER_DECLINED => [
                 'label' => 'Circle ownership transfer declined',
                 'description' => 'Sent to the requesting owner when the recipient declines the ownership transfer.',
+                'format' => EmailTemplate::FORMAT_MARKDOWN_MESSAGE,
                 'placeholders' => [
                     'recipient_name' => 'Name of the recipient (the current owner).',
                     'to_name' => 'Name of the user who declined ownership.',
@@ -174,6 +184,7 @@ class EmailTemplateRegistry
             self::GDPR_EXPORT_READY => [
                 'label' => 'GDPR export ready',
                 'description' => 'Sent to a user when their personal data export is ready for download.',
+                'format' => EmailTemplate::FORMAT_MARKDOWN_MESSAGE,
                 'placeholders' => [
                     'recipient_name' => 'Name of the recipient.',
                     'download_url' => 'Temporary URL where the user can download their export.',
@@ -199,6 +210,22 @@ class EmailTemplateRegistry
                     ],
                 ],
             ],
+
+            self::EARLY_ADOPTERS => [
+                'label' => 'Early adopters welcome mail',
+                'description' => 'One-off HTML mail naar handmatig opgegeven ontvanger. Geen wrapper, geen auto-signature — afsluiting zit in de HTML zelf.',
+                'format' => EmailTemplate::FORMAT_RAW_HTML,
+                'placeholders' => [],
+                'samples' => [],
+                'defaults' => [
+                    'nl' => [
+                        'subject' => 'Welkom bij Innerr — early access',
+                        'body' => '',
+                    ],
+                    'en' => ['subject' => '', 'body' => ''],
+                    'fr' => ['subject' => '', 'body' => ''],
+                ],
+            ],
         ];
     }
 
@@ -206,7 +233,9 @@ class EmailTemplateRegistry
      * @return array{
      *     label: string,
      *     description: string,
+     *     format: string,
      *     placeholders: array<string, string>,
+     *     samples: array<string, string>,
      *     defaults: array<string, array{subject: string, body: string}>,
      * }|null
      */

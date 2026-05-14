@@ -20,9 +20,10 @@ class EmailTemplateRenderer
             ? [$template->subjectFor($locale), $template->bodyFor($locale)]
             : $this->defaults($key, $locale);
 
-        $body = $this->appendSignature($body, $locale);
-
-        $placeholders['innerr_name'] = EmailSignature::randomName();
+        if (! $this->isRawHtml($template, $key)) {
+            $body = $this->appendSignature($body, $locale);
+            $placeholders['innerr_name'] = EmailSignature::randomName();
+        }
 
         return [
             'subject' => $this->replacePlaceholders($subject, $placeholders),
@@ -46,6 +47,16 @@ class EmailTemplateRenderer
             ?? ['subject' => '', 'body' => ''];
 
         return [(string) $defaults['subject'], (string) $defaults['body']];
+    }
+
+    private function isRawHtml(?EmailTemplate $template, string $key): bool
+    {
+        if ($template instanceof EmailTemplate) {
+            return $template->isRawHtml();
+        }
+
+        return (EmailTemplateRegistry::get($key)['format'] ?? EmailTemplate::FORMAT_MARKDOWN_MESSAGE)
+            === EmailTemplate::FORMAT_RAW_HTML;
     }
 
     private function appendSignature(string $body, string $locale): string

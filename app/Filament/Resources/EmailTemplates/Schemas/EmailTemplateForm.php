@@ -5,6 +5,7 @@ namespace App\Filament\Resources\EmailTemplates\Schemas;
 use App\Mail\EmailTemplates\EmailTemplateRegistry;
 use App\Models\EmailTemplate;
 use Filament\Forms\Components\MarkdownEditor;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
@@ -28,6 +29,7 @@ class EmailTemplateForm
                         : '')
                     ->schema([
                         View::make('filament.email-templates.placeholders')
+                            ->visible(fn (?EmailTemplate $record): bool => $record !== null && ! $record->isRawHtml())
                             ->viewData(fn (?EmailTemplate $record): array => [
                                 'placeholders' => $record
                                     ? (EmailTemplateRegistry::get($record->key)['placeholders'] ?? [])
@@ -54,17 +56,26 @@ class EmailTemplateForm
             ->schema([
                 TextInput::make($subjectField)
                     ->label('Subject')
-                    ->required()
                     ->maxLength(255)
                     ->live(onBlur: true)
+                    ->required(fn (?EmailTemplate $record): bool => $locale === 'nl' || ! ($record?->isRawHtml() ?? false))
                     ->columnSpanFull(),
 
                 MarkdownEditor::make($bodyField)
                     ->label('Body (markdown)')
-                    ->required()
                     ->live(debounce: 500)
                     ->disableToolbarButtons(['attachFiles'])
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->visible(fn (?EmailTemplate $record): bool => ! ($record?->isRawHtml() ?? false))
+                    ->required(fn (?EmailTemplate $record): bool => ! ($record?->isRawHtml() ?? false)),
+
+                Textarea::make($bodyField)
+                    ->label('Body (raw HTML)')
+                    ->rows(20)
+                    ->live(debounce: 500)
+                    ->extraInputAttributes(['style' => 'font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;'])
+                    ->columnSpanFull()
+                    ->visible(fn (?EmailTemplate $record): bool => (bool) $record?->isRawHtml()),
 
                 View::make('filament.email-templates.preview')
                     ->columnSpanFull()

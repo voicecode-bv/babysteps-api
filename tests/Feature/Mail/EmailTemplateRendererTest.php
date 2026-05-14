@@ -59,6 +59,21 @@ it('falls back to registry defaults when no database row exists', function () {
         ->and($rendered['body'])->toMatch('/(Nicky|Michael) from Innerr/');
 });
 
+it('skips signature and innerr_name for raw_html templates', function () {
+    EmailTemplate::query()->where('key', EmailTemplateRegistry::EARLY_ADOPTERS)->update([
+        'body_nl' => '<html><body>Hi {innerr_name}</body></html>',
+    ]);
+
+    $rendered = app(EmailTemplateRenderer::class)->render(
+        EmailTemplateRegistry::EARLY_ADOPTERS,
+        [],
+        'nl',
+    );
+
+    expect($rendered['body'])->toBe('<html><body>Hi {innerr_name}</body></html>')
+        ->and($rendered['body'])->not->toContain('Groetjes,');
+});
+
 it('leaves unknown placeholders untouched but always fills innerr_name', function () {
     EmailTemplate::query()->where('key', EmailTemplateRegistry::CIRCLE_INVITATION)->update([
         'subject_en' => '{inviter_name} invited {nonexistent}',

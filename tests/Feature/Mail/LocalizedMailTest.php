@@ -1,6 +1,7 @@
 <?php
 
 use App\Mail\EmailTemplates\EmailTemplateRegistry;
+use App\Mail\TestEmailTemplateMail;
 use App\Models\Circle;
 use App\Models\CircleInvitation;
 use App\Models\EmailTemplate;
@@ -9,6 +10,7 @@ use App\Notifications\CircleInvitationAcceptedNotification;
 use App\Notifications\CircleInvitationNotification;
 use App\Notifications\GdprExportReady;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function () {
@@ -56,6 +58,29 @@ it('renders the mail in English for recipients whose locale is en', function () 
 
     expect($email->getSubject())->toContain('has invited you')
         ->and($email->getHtmlBody())->toContain('Hello!');
+});
+
+it('sends raw_html templates without the mail message wrapper or signature', function () {
+    EmailTemplate::query()->where('key', EmailTemplateRegistry::EARLY_ADOPTERS)->update([
+        'subject_nl' => 'Welkom bij Innerr',
+        'body_nl' => '<!doctype html><html><body><div class="pc-project-body">Hallo early adopter!</div></body></html>',
+    ]);
+
+    Mail::to('jordan@example.test')->send(
+        new TestEmailTemplateMail(
+            templateKey: EmailTemplateRegistry::EARLY_ADOPTERS,
+            templateLocale: 'nl',
+        ),
+    );
+
+    $email = app('mailer')->getSymfonyTransport()->messages()[0]->getOriginalMessage();
+    $body = $email->getHtmlBody();
+
+    expect($email->getSubject())->toBe('Welkom bij Innerr')
+        ->and($body)->toContain('pc-project-body')
+        ->and($body)->toContain('Hallo early adopter!')
+        ->and($body)->not->toContain('Groetjes,')
+        ->and($body)->not->toContain('innerr-logo.png');
 });
 
 it('compiles the mail button component when included in a template body', function () {
