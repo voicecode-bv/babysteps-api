@@ -132,6 +132,16 @@ it('does not overwrite an existing name when Apple returns a null name on subseq
     expect($existing->fresh()->name)->toBe('Tim Original');
 });
 
+it('stores the locale from the Accept-Language header on a new oauth user', function () {
+    mockSocialiteDriver('google', mockSocialiteUser('g-locale', 'locale@example.com', 'Locale User'));
+
+    $this->withHeaders(['Accept-Language' => 'nl'])
+        ->get('/api/oauth/google/callback?code=test')
+        ->assertRedirect();
+
+    expect(User::where('email', 'locale@example.com')->value('locale'))->toBe('nl');
+});
+
 it('returns 404 for unsupported providers', function () {
     $this->get('/api/oauth/facebook/redirect')->assertNotFound();
     $this->get('/api/oauth/facebook/callback')->assertNotFound();

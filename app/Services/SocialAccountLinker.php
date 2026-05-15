@@ -40,6 +40,7 @@ class SocialAccountLinker
             'email' => $email,
             'email_verified_at' => now(),
             'password' => null,
+            'locale' => app()->getLocale(),
             $providerColumn => $providerId,
         ]);
     }

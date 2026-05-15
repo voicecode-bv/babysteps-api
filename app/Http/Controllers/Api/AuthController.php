@@ -98,7 +98,10 @@ class AuthController extends Controller
     )]
     public function register(RegisterRequest $request): JsonResponse
     {
-        $user = User::create($request->validated());
+        $user = User::create([
+            ...$request->validated(),
+            'locale' => app()->getLocale(),
+        ]);
 
         CircleInvitation::where('email', strtolower($user->email))
             ->where('status', InvitationStatus::Pending)

@@ -214,6 +214,27 @@ it('links pending email invitations on registration', function () {
     expect($invitation->fresh()->user_id)->toBe($newUser->id);
 });
 
+it('stores the locale from the Accept-Language header on registration', function (string $header, string $expected) {
+    $this->withHeaders(['Accept-Language' => $header])
+        ->postJson('/api/auth/register', [
+            'name' => 'Locale User',
+            'username' => 'localeuser-'.str_replace('-', '', $header),
+            'email' => 'locale-'.$header.'@example.com',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+            'device_name' => 'testing',
+        ])->assertCreated();
+
+    $this->assertDatabaseHas('users', [
+        'email' => 'locale-'.$header.'@example.com',
+        'locale' => $expected,
+    ]);
+})->with([
+    'nl' => ['nl', 'nl'],
+    'en' => ['en', 'en'],
+    'fr' => ['fr', 'fr'],
+]);
+
 it('does not link accepted email invitations on registration', function () {
     $invitation = CircleInvitation::factory()->create([
         'email' => 'newuser2@example.com',
