@@ -20,6 +20,8 @@ class EmailTemplateRegistry
 
     public const EARLY_ADOPTERS = 'early_adopters';
 
+    public const SUBSCRIPTION_STARTED = 'subscription_started';
+
     /**
      * @return array<string, array{
      *     label: string,
@@ -226,6 +228,34 @@ class EmailTemplateRegistry
                     ],
                     'en' => ['subject' => '', 'body' => ''],
                     'fr' => ['subject' => '', 'body' => ''],
+                ],
+            ],
+
+            self::SUBSCRIPTION_STARTED => [
+                'label' => 'Subscription started (thank you)',
+                'description' => 'Sent to a user when their subscription is activated for the first time. Introduces Innerr Geeft.',
+                'format' => EmailTemplate::FORMAT_MARKDOWN_MESSAGE,
+                'placeholders' => [
+                    'recipient_name' => 'Name of the subscriber.',
+                    'donate_url' => 'Public landing page that explains Innerr Geeft.',
+                ],
+                'samples' => [
+                    'recipient_name' => 'Jordan',
+                    'donate_url' => 'https://innerr.app/nl/doneren/',
+                ],
+                'defaults' => [
+                    'nl' => [
+                        'subject' => 'Bedankt voor je abonnement op Innerr',
+                        'body' => "# Bedankt {recipient_name}!\n\nFijn dat je een abonnement op Innerr hebt afgesloten. Met jouw bijdrage kunnen we Innerr blijven verbeteren en uitbouwen.\n\n## Innerr Geeft\n\nWist je dat een deel van elk abonnement direct ten goede komt aan goede doelen? Via **Innerr Geeft** doneren we een vast percentage van onze inkomsten aan initiatieven die bijdragen aan welzijn, verbinding en mentale gezondheid.\n\nMeer lezen over Innerr Geeft en welke projecten we steunen? Kijk op [innerr.app/nl/doneren]({donate_url}).\n\nNogmaals dank dat je deel uitmaakt van Innerr.",
+                    ],
+                    'en' => [
+                        'subject' => 'Thank you for subscribing to Innerr',
+                        'body' => "# Thank you {recipient_name}!\n\nWe're glad you've started a subscription with Innerr. Your support helps us keep improving and growing the app.\n\n## Innerr Gives\n\nDid you know that part of every subscription goes directly to charity? Through **Innerr Gives** we donate a fixed percentage of our revenue to initiatives that promote wellbeing, connection and mental health.\n\nCurious which projects we support? Read more at [innerr.app/en/donate]({donate_url}).\n\nThanks again for being part of Innerr.",
+                    ],
+                    'fr' => [
+                        'subject' => 'Merci pour votre abonnement à Innerr',
+                        'body' => "# Merci {recipient_name} !\n\nNous sommes ravis que vous ayez souscrit un abonnement à Innerr. Votre soutien nous permet de continuer à améliorer et à développer l'application.\n\n## Innerr Donne\n\nSaviez-vous qu'une partie de chaque abonnement est directement reversée à des œuvres caritatives ? Grâce à **Innerr Donne**, nous reversons un pourcentage fixe de nos revenus à des initiatives qui favorisent le bien-être, le lien social et la santé mentale.\n\nEnvie d'en savoir plus sur les projets que nous soutenons ? Rendez-vous sur [innerr.app/fr/don]({donate_url}).\n\nMerci encore de faire partie d'Innerr.",
+                    ],
                 ],
             ],
         ];

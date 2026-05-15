@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Events\SubscriptionStatusChanged;
 use App\Listeners\InvalidateUserPlanCache;
 use App\Listeners\PruneInvalidFcmTokens;
+use App\Listeners\SendSubscriptionStartedMail;
 use App\Models\Subscription;
 use App\Observers\SubscriptionObserver;
 use App\Services\Subscriptions\Apple\AppleJwsVerifier;
@@ -129,6 +130,7 @@ class AppServiceProvider extends ServiceProvider
         EloquentSpatial::setDefaultSrid(Srid::WGS84);
 
         $events->listen(SubscriptionStatusChanged::class, InvalidateUserPlanCache::class);
+        $events->listen(SubscriptionStatusChanged::class, SendSubscriptionStartedMail::class);
         $events->listen(NotificationFailed::class, PruneInvalidFcmTokens::class);
         Subscription::observe(SubscriptionObserver::class);
 
