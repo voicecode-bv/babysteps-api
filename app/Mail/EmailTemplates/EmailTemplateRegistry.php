@@ -24,6 +24,8 @@ class EmailTemplateRegistry
 
     public const PASSWORD_RESET = 'password_reset';
 
+    public const ONBOARDING_COMPLETED = 'onboarding_completed';
+
     /**
      * @return array<string, array{
      *     label: string,
@@ -317,6 +319,104 @@ MD,
                     'fr' => [
                         'subject' => 'Réinitialisez votre mot de passe',
                         'body' => "# Bonjour {recipient_name} !\n\nVous recevez cet e-mail parce que nous avons reçu une demande de réinitialisation du mot de passe de votre compte.\n\n[Réinitialiser le mot de passe]({reset_url})\n\nCe lien de réinitialisation expirera dans {minutes} minutes.\n\nSi vous n'avez pas demandé de réinitialisation, aucune action n'est requise.",
+                    ],
+                ],
+            ],
+
+            self::ONBOARDING_COMPLETED => [
+                'label' => 'Onboarding completed (welcome)',
+                'description' => 'Sent the first time a user finishes onboarding. Welcomes them and explains how Innerr works.',
+                'format' => EmailTemplate::FORMAT_MARKDOWN_MESSAGE,
+                'placeholders' => [
+                    'recipient_name' => 'Name of the user who just completed onboarding.',
+                ],
+                'samples' => [
+                    'recipient_name' => 'Jordan',
+                ],
+                'defaults' => [
+                    'nl' => [
+                        'subject' => 'Welkom bij Innerr, {recipient_name}!',
+                        'body' => <<<'MD'
+# Welkom bij Innerr, {recipient_name}!
+
+Fijn dat je erbij bent. Innerr is jouw privé sociale tijdlijn, alleen voor de mensen die jij kiest. Hier is hoe je snel op weg komt:
+
+## Zo werkt Innerr
+
+**Kringen** — Maak een kring per groep mensen (familie, vrienden, schoolklas) en bepaal zelf wie erin zit. Wat je in een kring deelt blijft binnen die kring.
+
+**Posten** — Tik op het camera-icoon onderaan om een foto of video te delen. Kies in welke kring(en) hij verschijnt. Geen algoritme, geen vreemden — alleen jouw mensen.
+
+**Reageren & liken** — Net als je gewend bent, maar zonder publieke likes-tellers of advertenties.
+
+**Kaart** — Op de kaart zie je waar momenten uit jouw kringen gedeeld zijn. Handig voor reisherinneringen en vakanties met familie.
+
+**Profiel** — Pas je foto, bio en meldingen aan via je profiel. Jij bepaalt welke meldingen je krijgt.
+
+## Privé, en dat blijft zo
+
+Geen advertenties, geen AI-training op jouw foto's, gehost in de EU. Wat je deelt is en blijft van jou.
+
+Heb je een vraag of idee? Antwoord gerust op deze mail — we lezen alles persoonlijk.
+
+Veel plezier!
+MD,
+                    ],
+                    'en' => [
+                        'subject' => 'Welcome to Innerr, {recipient_name}!',
+                        'body' => <<<'MD'
+# Welcome to Innerr, {recipient_name}!
+
+Glad to have you on board. Innerr is your private social timeline, only for the people you choose. Here's how to get started:
+
+## How Innerr works
+
+**Circles** — Create a circle per group of people (family, friends, school class) and decide yourself who joins. What you share in a circle stays inside that circle.
+
+**Posting** — Tap the camera icon at the bottom to share a photo or video. Choose which circle(s) it appears in. No algorithm, no strangers — just your people.
+
+**Comments & likes** — Just like you're used to, but without public like counters or advertising.
+
+**Map** — The map shows where moments from your circles were shared. Great for travel memories and family holidays.
+
+**Profile** — Update your photo, bio and notifications from your profile. You decide which notifications you receive.
+
+## Private, and staying that way
+
+No ads, no AI training on your photos, hosted in the EU. What you share stays yours.
+
+Got a question or idea? Just reply to this email — we read every message personally.
+
+Enjoy!
+MD,
+                    ],
+                    'fr' => [
+                        'subject' => 'Bienvenue sur Innerr, {recipient_name} !',
+                        'body' => <<<'MD'
+# Bienvenue sur Innerr, {recipient_name} !
+
+Ravis de vous accueillir. Innerr est votre fil social privé, réservé aux personnes que vous choisissez. Voici comment démarrer :
+
+## Comment fonctionne Innerr
+
+**Cercles** — Créez un cercle par groupe (famille, amis, classe d'école) et décidez vous-même qui en fait partie. Ce que vous partagez dans un cercle y reste.
+
+**Publier** — Touchez l'icône appareil photo en bas pour partager une photo ou une vidéo. Choisissez dans quel(s) cercle(s) elle apparaît. Pas d'algorithme, pas d'inconnus — uniquement vos proches.
+
+**Commentaires et likes** — Comme vous en avez l'habitude, mais sans compteurs publics ni publicité.
+
+**Carte** — La carte montre où les moments de vos cercles ont été partagés. Parfait pour les souvenirs de voyage et les vacances en famille.
+
+**Profil** — Modifiez votre photo, bio et notifications depuis votre profil. C'est vous qui décidez quelles notifications recevoir.
+
+## Privé, et ça le restera
+
+Pas de publicités, pas d'entraînement d'IA sur vos photos, hébergé dans l'UE. Ce que vous partagez vous appartient.
+
+Une question ou une idée ? Répondez simplement à cet e-mail — nous lisons chaque message personnellement.
+
+Bonne découverte !
+MD,
                     ],
                 ],
             ],

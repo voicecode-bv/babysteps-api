@@ -1,6 +1,8 @@
 <?php
 
 use App\Models\User;
+use App\Notifications\OnboardingCompleted;
+use Illuminate\Support\Facades\Notification;
 
 it('requires authentication', function () {
     $this->postJson('/api/onboarding/complete')->assertUnauthorized();
@@ -28,4 +30,28 @@ it('updates the timestamp when called again', function () {
         ->assertNoContent();
 
     expect($user->fresh()->onboarded_at->timestamp)->toBe(now()->timestamp);
+});
+
+it('sends the welcome mail the first time onboarding completes', function () {
+    Notification::fake();
+
+    $user = User::factory()->create(['onboarded_at' => null]);
+
+    $this->actingAs($user)
+        ->postJson('/api/onboarding/complete')
+        ->assertNoContent();
+
+    Notification::assertSentTo($user, OnboardingCompleted::class);
+});
+
+it('does not send the welcome mail when onboarding was already completed', function () {
+    Notification::fake();
+
+    $user = User::factory()->create(['onboarded_at' => now()->subDays(5)]);
+
+    $this->actingAs($user)
+        ->postJson('/api/onboarding/complete')
+        ->assertNoContent();
+
+    Notification::assertNothingSentTo($user);
 });

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Notifications\OnboardingCompleted;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use OpenApi\Attributes as OA;
@@ -22,7 +23,14 @@ class OnboardingController extends Controller
     )]
     public function __invoke(Request $request): Response
     {
-        $request->user()->forceFill(['onboarded_at' => now()])->save();
+        $user = $request->user();
+        $isFirstCompletion = $user->onboarded_at === null;
+
+        $user->forceFill(['onboarded_at' => now()])->save();
+
+        if ($isFirstCompletion) {
+            $user->notify(new OnboardingCompleted);
+        }
 
         return response()->noContent();
     }
