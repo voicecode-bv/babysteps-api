@@ -39,7 +39,8 @@ it('renders mail notifications in the recipient preferred locale', function () {
         ->and($body)->toContain('Je persoonlijke data-export staat klaar om te downloaden.')
         ->and($body)->toContain('Download je gegevens')
         ->and($body)->toContain('Groetjes,')
-        ->and($body)->toMatch('/(Nicky|Michael) van Innerr/');
+        ->and($body)->toContain('Nicky van Innerr')
+        ->and($body)->toContain('mailing.innerr.app/images/nicky.jpg');
 });
 
 it('renders the mail in English for recipients whose locale is en', function () {

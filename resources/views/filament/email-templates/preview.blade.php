@@ -15,10 +15,6 @@
         ? (EmailTemplateRegistry::get($record->key)['samples'] ?? [])
         : [];
 
-    if (! $isRawHtml) {
-        $samples['innerr_name'] = EmailSignature::randomName();
-    }
-
     $tokens = [];
     foreach ($samples as $name => $value) {
         $tokens['{'.$name.'}'] = (string) $value;

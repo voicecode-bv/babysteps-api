@@ -21,7 +21,9 @@ it('renders the requested locale and replaces placeholders', function () {
     expect($rendered['subject'])->toBe('Sophie heeft je uitgenodigd')
         ->and($rendered['body'])->toStartWith('Hallo, Sophie heeft je uitgenodigd.')
         ->and($rendered['body'])->toContain('Groetjes,')
-        ->and($rendered['body'])->toMatch('/(Nicky|Michael) van Innerr/');
+        ->and($rendered['body'])->toContain('Nicky van Innerr')
+        ->and($rendered['body'])->toContain('https://mailing.innerr.app/images/nicky.jpg')
+        ->and($rendered['body'])->toContain('border-radius: 9999px');
 });
 
 it('falls back to english when the requested locale is empty', function () {
@@ -41,7 +43,7 @@ it('falls back to english when the requested locale is empty', function () {
     expect($rendered['subject'])->toBe('Sophie has invited you')
         ->and($rendered['body'])->toStartWith('Hello, Sophie has invited you.')
         ->and($rendered['body'])->toContain('À bientôt,')
-        ->and($rendered['body'])->toMatch('/(Nicky|Michael) de Innerr/');
+        ->and($rendered['body'])->toContain('Nicky de Innerr');
 });
 
 it('falls back to registry defaults when no database row exists', function () {
@@ -56,12 +58,12 @@ it('falls back to registry defaults when no database row exists', function () {
     expect($rendered['subject'])->toBe('Sophie has invited you to Family')
         ->and($rendered['body'])->toContain('Sophie has invited you to join the circle "Family"')
         ->and($rendered['body'])->toContain('Cheers,')
-        ->and($rendered['body'])->toMatch('/(Nicky|Michael) from Innerr/');
+        ->and($rendered['body'])->toContain('Nicky from Innerr');
 });
 
-it('skips signature and innerr_name for raw_html templates', function () {
+it('skips the signature for raw_html templates', function () {
     EmailTemplate::query()->where('key', EmailTemplateRegistry::EARLY_ADOPTERS)->update([
-        'body_nl' => '<html><body>Hi {innerr_name}</body></html>',
+        'body_nl' => '<html><body>Hi</body></html>',
     ]);
 
     $rendered = app(EmailTemplateRenderer::class)->render(
@@ -70,11 +72,12 @@ it('skips signature and innerr_name for raw_html templates', function () {
         'nl',
     );
 
-    expect($rendered['body'])->toBe('<html><body>Hi {innerr_name}</body></html>')
-        ->and($rendered['body'])->not->toContain('Groetjes,');
+    expect($rendered['body'])->toBe('<html><body>Hi</body></html>')
+        ->and($rendered['body'])->not->toContain('Groetjes,')
+        ->and($rendered['body'])->not->toContain('mailing.innerr.app/images/nicky.jpg');
 });
 
-it('leaves unknown placeholders untouched but always fills innerr_name', function () {
+it('leaves unknown placeholders untouched and appends the Nicky signature', function () {
     EmailTemplate::query()->where('key', EmailTemplateRegistry::CIRCLE_INVITATION)->update([
         'subject_en' => '{inviter_name} invited {nonexistent}',
         'body_en' => 'Body {missing}.',
@@ -88,6 +91,5 @@ it('leaves unknown placeholders untouched but always fills innerr_name', functio
 
     expect($rendered['subject'])->toBe('Sophie invited {nonexistent}')
         ->and($rendered['body'])->toStartWith('Body {missing}.')
-        ->and($rendered['body'])->not->toContain('{innerr_name}')
-        ->and($rendered['body'])->toMatch('/(Nicky|Michael) from Innerr/');
+        ->and($rendered['body'])->toContain('Nicky from Innerr');
 });

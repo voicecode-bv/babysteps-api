@@ -22,7 +22,6 @@ class EmailTemplateRenderer
 
         if (! $this->isRawHtml($template, $key)) {
             $body = $this->appendSignature($body, $locale);
-            $placeholders['innerr_name'] = EmailSignature::randomName();
         }
 
         return [

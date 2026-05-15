@@ -4,23 +4,38 @@ namespace App\Mail\EmailTemplates;
 
 class EmailSignature
 {
-    /** @var array<string, string> */
-    private const TEMPLATES = [
-        'nl' => "Groetjes,\n\n{innerr_name} van Innerr",
-        'en' => "Cheers,\n\n{innerr_name} from Innerr",
-        'fr' => "À bientôt,\n\n{innerr_name} de Innerr",
-    ];
+    public const SENDER_NAME = 'Nicky';
 
-    /** @var array<int, string> */
-    private const NAMES = ['Nicky', 'Michael'];
+    public const AVATAR_URL = 'https://mailing.innerr.app/images/nicky.jpg';
+
+    /** @var array<string, array{greeting: string, role: string}> */
+    private const TEMPLATES = [
+        'nl' => ['greeting' => 'Groetjes,', 'role' => 'van Innerr'],
+        'en' => ['greeting' => 'Cheers,', 'role' => 'from Innerr'],
+        'fr' => ['greeting' => 'À bientôt,', 'role' => 'de Innerr'],
+    ];
 
     public static function template(string $locale): string
     {
-        return self::TEMPLATES[$locale] ?? self::TEMPLATES['en'];
-    }
+        $copy = self::TEMPLATES[$locale] ?? self::TEMPLATES['en'];
 
-    public static function randomName(): string
-    {
-        return self::NAMES[array_rand(self::NAMES)];
+        $avatar = self::AVATAR_URL;
+        $name = self::SENDER_NAME;
+        $greeting = $copy['greeting'];
+        $role = $copy['role'];
+
+        return <<<HTML
+<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="margin-top: 32px; border-collapse: separate;">
+<tr>
+<td style="padding-right: 16px; vertical-align: middle;">
+<img src="{$avatar}" alt="{$name}" width="56" height="56" style="display: block; width: 56px; height: 56px; border-radius: 9999px; -webkit-border-radius: 9999px; object-fit: cover;">
+</td>
+<td style="vertical-align: middle; font-family: 'DM Sans', Arial, sans-serif; color: #1A1F4A; line-height: 1.4; font-size: 16px;">
+{$greeting}<br>
+<strong>{$name} {$role}</strong>
+</td>
+</tr>
+</table>
+HTML;
     }
 }
