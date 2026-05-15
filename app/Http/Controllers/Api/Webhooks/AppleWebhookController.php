@@ -16,9 +16,12 @@ class AppleWebhookController extends Controller
 {
     public function __invoke(Request $request, ChannelRegistry $registry): JsonResponse
     {
+        $log = Log::channel('subscriptions');
         $signedPayload = (string) $request->input('signedPayload');
 
         if ($signedPayload === '') {
+            $log->warning('apple webhook: missing signedPayload');
+
             return new JsonResponse(['message' => 'Missing signedPayload.'], 422);
         }
 
@@ -28,7 +31,7 @@ class AppleWebhookController extends Controller
         try {
             $outcome = $channel->handleWebhook($request);
         } catch (\Throwable $e) {
-            Log::warning('Apple webhook: handleWebhook failed', [
+            $log->warning('apple webhook: handleWebhook failed', [
                 'error' => $e->getMessage(),
                 'exception_class' => $e::class,
                 'signed_payload_prefix' => substr($signedPayload, 0, 80),
@@ -38,6 +41,10 @@ class AppleWebhookController extends Controller
         }
 
         if ($outcome->externalEventId === '') {
+            $log->warning('apple webhook: missing notificationUUID', [
+                'type' => $outcome->type?->value,
+            ]);
+
             return new JsonResponse(['message' => 'Missing notificationUUID.'], 422);
         }
 
@@ -47,6 +54,10 @@ class AppleWebhookController extends Controller
             ->first();
 
         if ($existing) {
+            $log->info('apple webhook: duplicate notification ignored', [
+                'notification_uuid' => $outcome->externalEventId,
+            ]);
+
             return new JsonResponse(['message' => 'Already processed.'], 200);
         }
 
@@ -57,6 +68,13 @@ class AppleWebhookController extends Controller
             'occurred_at' => $outcome->occurredAt,
             'received_at' => now(),
             'payload' => array_merge($outcome->payload, ['signedPayload' => $signedPayload]),
+        ]);
+
+        $log->info('apple webhook: accepted', [
+            'event_id' => $event->id,
+            'notification_uuid' => $outcome->externalEventId,
+            'type' => $outcome->type?->value,
+            'channel_subscription_id' => $outcome->channelSubscriptionId,
         ]);
 
         ProcessSubscriptionEvent::dispatch($event->id);

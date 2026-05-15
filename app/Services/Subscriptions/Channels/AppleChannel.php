@@ -100,7 +100,10 @@ class AppleChannel implements PaymentChannel
 
     public function fetchAuthoritativeStatus(Subscription $subscription): SubscriptionStatusDto
     {
-        $statuses = $this->api->getAllSubscriptionStatuses($subscription->channel_subscription_id);
+        $statuses = $this->api->getAllSubscriptionStatuses(
+            $subscription->channel_subscription_id,
+            preferredEnvironment: $subscription->environment,
+        );
 
         return $this->dtoFromStatuses($statuses, $subscription->channel_subscription_id);
     }

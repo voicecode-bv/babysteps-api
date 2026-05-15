@@ -25,6 +25,7 @@ use Illuminate\Queue\Middleware\WithoutOverlapping;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Mollie\Api\MollieApiClient;
 use Mollie\Api\Resources\Payment;
 
@@ -60,18 +61,48 @@ class ProcessSubscriptionEvent implements ShouldQueue
         return [(new WithoutOverlapping((string) $key))->expireAfter(120)];
     }
 
+    /**
+     * Horizon tags so RTDN/ASSN events are filterable in the dashboard.
+     *
+     * @return array<int, string>
+     */
+    public function tags(): array
+    {
+        $event = SubscriptionEvent::query()->find($this->eventId);
+
+        if ($event === null) {
+            return ['subscriptions', "event:{$this->eventId}"];
+        }
+
+        return array_values(array_filter([
+            'subscriptions',
+            $event->channel ? 'channel:'.$event->channel->value : null,
+            $event->type ? 'type:'.$event->type->value : null,
+            "event:{$this->eventId}",
+        ]));
+    }
+
     public function handle(
         ChannelRegistry $registry,
         SubscriptionStateMachine $stateMachine,
         MollieApiClient $mollie,
         AppleJwsVerifier $appleVerifier,
     ): void {
-        DB::transaction(function () use ($registry, $stateMachine, $mollie, $appleVerifier): void {
+        $log = Log::channel('subscriptions');
+
+        DB::transaction(function () use ($registry, $stateMachine, $mollie, $appleVerifier, $log): void {
             $event = SubscriptionEvent::query()->lockForUpdate()->find($this->eventId);
 
             if (! $event || $event->processed_at !== null) {
                 return;
             }
+
+            $log->info('subscription event: processing', [
+                'event_id' => $event->id,
+                'channel' => $event->channel?->value,
+                'type' => $event->type?->value,
+                'external_event_id' => $event->external_event_id,
+            ]);
 
             match ($event->channel) {
                 SubscriptionChannel::Mollie => $this->processMollieEvent($event, $registry, $stateMachine, $mollie),
@@ -81,6 +112,11 @@ class ProcessSubscriptionEvent implements ShouldQueue
             };
 
             $event->update(['processed_at' => now()]);
+
+            $log->info('subscription event: processed', [
+                'event_id' => $event->id,
+                'subscription_id' => $event->subscription_id,
+            ]);
         });
     }
 

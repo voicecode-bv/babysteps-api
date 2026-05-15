@@ -16,10 +16,12 @@ class GoogleWebhookController extends Controller
 {
     public function __invoke(Request $request, ChannelRegistry $registry): JsonResponse
     {
+        $log = Log::channel('subscriptions');
+
         /** @var GoogleChannel $channel */
         $channel = $registry->for(SubscriptionChannel::Google);
 
-        Log::info('Google webhook: received', [
+        $log->info('google webhook: received', [
             'has_bearer' => $request->bearerToken() !== null,
             'message_id' => $request->input('message.messageId'),
             'subscription' => $request->input('subscription'),
@@ -28,7 +30,7 @@ class GoogleWebhookController extends Controller
         try {
             $outcome = $channel->handleWebhook($request);
         } catch (\Throwable $e) {
-            Log::warning('Google webhook: handleWebhook failed', [
+            $log->warning('google webhook: handleWebhook failed', [
                 'error' => $e->getMessage(),
                 'exception_class' => $e::class,
                 'message_id' => $request->input('message.messageId'),
@@ -38,7 +40,7 @@ class GoogleWebhookController extends Controller
         }
 
         if ($outcome->externalEventId === '') {
-            Log::warning('Google webhook: missing message id in outcome');
+            $log->warning('google webhook: missing message id in outcome');
 
             return new JsonResponse(['message' => 'Missing message id.'], 422);
         }
@@ -49,6 +51,10 @@ class GoogleWebhookController extends Controller
             ->first();
 
         if ($existing) {
+            $log->info('google webhook: duplicate notification ignored', [
+                'message_id' => $outcome->externalEventId,
+            ]);
+
             return new JsonResponse(['message' => 'Already processed.'], 200);
         }
 
@@ -59,6 +65,13 @@ class GoogleWebhookController extends Controller
             'occurred_at' => $outcome->occurredAt,
             'received_at' => now(),
             'payload' => $outcome->payload + ['channel_subscription_id' => $outcome->channelSubscriptionId],
+        ]);
+
+        $log->info('google webhook: accepted', [
+            'event_id' => $event->id,
+            'message_id' => $outcome->externalEventId,
+            'type' => $outcome->type?->value,
+            'channel_subscription_id' => $outcome->channelSubscriptionId,
         ]);
 
         ProcessSubscriptionEvent::dispatch($event->id);
