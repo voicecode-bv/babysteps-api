@@ -42,6 +42,9 @@ class AppleVerifyController extends Controller
             $status = $channel->verifyClientPurchase(new VerifyPurchaseRequest(
                 user: $user,
                 token: $request->string('signed_transaction')->toString(),
+                originalTransactionId: $request->filled('original_transaction_id')
+                    ? $request->string('original_transaction_id')->toString()
+                    : null,
             ));
         } catch (\Throwable $e) {
             return new JsonResponse([

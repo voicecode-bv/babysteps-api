@@ -33,17 +33,23 @@ class AppleChannel implements PaymentChannel
     }
 
     /**
-     * Client (StoreKit 2) submits a signedTransaction JWS. We don't trust its
-     * signature alone — we extract the originalTransactionId, then ask the
-     * App Store Server API for the authoritative subscription state.
+     * Client (StoreKit 2) submits either a signedTransaction JWS or just the
+     * originalTransactionId. The JWS path is preferred when available, but the
+     * IAP bridge currently doesn't expose `jwsRepresentation` — so we also
+     * accept the bare ID. In both cases we trust the App Store Server API for
+     * the authoritative subscription state, not the client payload itself.
      */
     public function verifyClientPurchase(VerifyPurchaseRequest $dto): SubscriptionStatusDto
     {
-        $payload = $this->verifier->decodeUnverified($dto->token);
-        $originalTransactionId = (string) ($payload['originalTransactionId'] ?? '');
+        $originalTransactionId = (string) ($dto->originalTransactionId ?? '');
+
+        if ($originalTransactionId === '' && $dto->token !== '') {
+            $payload = $this->verifier->decodeUnverified($dto->token);
+            $originalTransactionId = (string) ($payload['originalTransactionId'] ?? '');
+        }
 
         if ($originalTransactionId === '') {
-            throw new RuntimeException('Apple signedTransaction is missing originalTransactionId.');
+            throw new RuntimeException('Apple verify requires signed_transaction or original_transaction_id.');
         }
 
         $statuses = $this->api->getAllSubscriptionStatuses($originalTransactionId);

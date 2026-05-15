@@ -94,3 +94,54 @@ it('verifies, fetches authoritative status from Apple, and creates an active sub
 
     $response->assertJsonPath('plan', 'plus');
 });
+
+it('verifies using only an original_transaction_id when no JWS is available', function () {
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $key = openssl_pkey_new(['private_key_type' => OPENSSL_KEYTYPE_EC, 'curve_name' => 'prime256v1']);
+    openssl_pkey_export($key, $privatePem);
+
+    $api = Mockery::mock(AppStoreServerApi::class);
+    $api->shouldReceive('getAllSubscriptionStatuses')
+        ->with('apple-orig-67890')
+        ->andReturn([
+            'environment' => 'Production',
+            'bundleId' => 'app.innerr.test',
+            'data' => [[
+                'status' => 1,
+                'signedTransactionInfo' => JWT::encode([
+                    'productId' => 'plus_apple_monthly',
+                    'purchaseDate' => (int) (now()->valueOf()),
+                    'expiresDate' => (int) (now()->addMonth()->valueOf()),
+                    'inAppOwnershipType' => 'PURCHASED',
+                ], $privatePem, 'ES256'),
+                'signedRenewalInfo' => JWT::encode([
+                    'autoRenewStatus' => 1,
+                ], $privatePem, 'ES256'),
+            ]],
+        ]);
+    $this->app->instance(AppStoreServerApi::class, $api);
+    $this->app->forgetInstance(ChannelRegistry::class);
+
+    $this->postJson('/api/subscription/iap/apple/verify', [
+        'original_transaction_id' => 'apple-orig-67890',
+    ])->assertCreated();
+
+    $sub = Subscription::query()
+        ->where('channel', SubscriptionChannel::Apple)
+        ->where('channel_subscription_id', 'apple-orig-67890')
+        ->first();
+    expect($sub)->not->toBeNull()
+        ->and($sub->status)->toBe(SubscriptionStatus::Active)
+        ->and($sub->user_id)->toBe($user->id);
+});
+
+it('rejects requests with neither signed_transaction nor original_transaction_id', function () {
+    $user = User::factory()->create();
+    Sanctum::actingAs($user);
+
+    $this->postJson('/api/subscription/iap/apple/verify', [])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['signed_transaction', 'original_transaction_id']);
+});

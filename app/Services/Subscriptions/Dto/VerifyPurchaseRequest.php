@@ -8,8 +8,9 @@ final readonly class VerifyPurchaseRequest
 {
     public function __construct(
         public User $user,
-        public string $token,
+        public string $token = '',
         public ?string $productId = null,
+        public ?string $originalTransactionId = null,
         /** @var array<string, mixed> */
         public array $context = [],
     ) {}

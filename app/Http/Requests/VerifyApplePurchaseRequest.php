@@ -17,7 +17,8 @@ class VerifyApplePurchaseRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'signed_transaction' => ['required', 'string', 'max:8192'],
+            'signed_transaction' => ['required_without:original_transaction_id', 'nullable', 'string', 'max:8192'],
+            'original_transaction_id' => ['required_without:signed_transaction', 'nullable', 'string', 'max:255'],
         ];
     }
 }
