@@ -35,3 +35,58 @@ it('strips a leading /storage/ prefix from the path', function () {
 
     expect($withPrefix)->toBe($withoutPrefix);
 });
+
+it('routes through the Bunny CDN signer when configured', function () {
+    Carbon::setTestNow('2026-04-27 10:15:00');
+
+    config([
+        'services.bunny_cdn.url' => 'https://media.innerr.app',
+        'services.bunny_cdn.token_key' => 'test-token-key',
+    ]);
+
+    $url = MediaUrl::sign('users/abc/posts/photo.jpg');
+
+    expect($url)
+        ->toStartWith('https://media.innerr.app/users/abc/posts/photo.jpg?')
+        ->toContain('token=HS256-')
+        ->toContain('expires=');
+});
+
+it('strips the /storage/ prefix before signing with Bunny CDN', function () {
+    Carbon::setTestNow('2026-04-27 10:15:00');
+
+    config([
+        'services.bunny_cdn.url' => 'https://media.innerr.app',
+        'services.bunny_cdn.token_key' => 'test-token-key',
+    ]);
+
+    $direct = MediaUrl::sign('avatars/abc.jpg');
+    $withPrefix = MediaUrl::sign('https://example.test/storage/avatars/abc.jpg');
+
+    expect($withPrefix)->toBe($direct);
+});
+
+it('passes through external URLs unchanged (e.g. picsum seed data)', function () {
+    config([
+        'services.bunny_cdn.url' => 'https://media-dev.innerr.app',
+        'services.bunny_cdn.token_key' => 'test-token-key',
+    ]);
+
+    $external = 'https://picsum.photos/seed/6296/600/600';
+
+    expect(MediaUrl::sign($external))->toBe($external);
+});
+
+it('falls back to a signed Laravel route when Bunny is not configured', function () {
+    Carbon::setTestNow('2026-04-27 10:15:00');
+
+    config([
+        'services.bunny_cdn.url' => null,
+        'services.bunny_cdn.token_key' => null,
+    ]);
+
+    $url = MediaUrl::sign('avatars/abc.jpg');
+
+    expect($url)->toContain('/api/media/');
+    expect($url)->toContain('signature=');
+});

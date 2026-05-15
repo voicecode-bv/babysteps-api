@@ -78,4 +78,19 @@ return [
         'webhook_secret' => env('MOLLIE_WEBHOOK_SECRET'),
     ],
 
+    'bunny_cdn' => [
+        /*
+         * Base URL of the Bunny pull zone, e.g. https://media.innerr.app.
+         * When null, MediaUrl falls back to the storage disk's own temporaryUrl()
+         * (S3 presigned) or to a signed Laravel route in test/local.
+         */
+        'url' => env('BUNNY_CDN_URL'),
+
+        /*
+         * Token Authentication Key from the pull zone Security tab. Required
+         * whenever `url` is set. Treat as a secret.
+         */
+        'token_key' => env('BUNNY_CDN_TOKEN_KEY'),
+    ],
+
 ];

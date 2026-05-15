@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Services\BunnyCdn\UrlSigner as BunnyCdnUrlSigner;
 use Illuminate\Contracts\Filesystem\Filesystem;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
@@ -21,10 +22,20 @@ class MediaUrl
 
         if (preg_match('#/storage/(.+)$#', $path, $matches)) {
             $path = $matches[1];
+        } elseif (preg_match('#^https?://#', $path)) {
+            // External URL (e.g. picsum.photos seed data) — pass through unchanged.
+            return $path;
+        }
+
+        $expires = static::expiry();
+
+        $bunny = BunnyCdnUrlSigner::fromConfig();
+
+        if ($bunny !== null) {
+            return $bunny->sign($path, $expires);
         }
 
         $disk = static::disk();
-        $expires = static::expiry();
 
         if (method_exists($disk, 'temporaryUrl')) {
             try {
@@ -64,7 +75,7 @@ class MediaUrl
     /**
      * Stable expiry that snaps to the start of the next hour, so identical
      * paths produce identical signed URLs within a single hour window.
-     * This lets browsers and the Spaces CDN cache by URL.
+     * This lets browsers and the Bunny CDN edge cache by URL.
      */
     protected static function expiry(): \DateTimeInterface
     {
