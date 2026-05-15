@@ -63,6 +63,7 @@ it('falls back to registry defaults when no database row exists', function () {
 
 it('skips the signature for raw_html templates', function () {
     EmailTemplate::query()->where('key', EmailTemplateRegistry::EARLY_ADOPTERS)->update([
+        'body_format' => EmailTemplate::FORMAT_RAW_HTML,
         'body_nl' => '<html><body>Hi</body></html>',
     ]);
 

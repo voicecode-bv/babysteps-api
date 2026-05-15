@@ -61,11 +61,9 @@ it('renders the mail in English for recipients whose locale is en', function () 
         ->and($email->getHtmlBody())->toContain('Hello!');
 });
 
-it('sends raw_html templates without the mail message wrapper, with a plain-text alternative, and via the broadcast mailer', function () {
-    config()->set('mail.mailers.postmark_broadcast', ['transport' => 'array']);
-    app('mail.manager')->forgetMailers();
-
+it('sends raw_html templates without the mail message wrapper, with a plain-text alternative, and via the default transactional mailer', function () {
     EmailTemplate::query()->where('key', EmailTemplateRegistry::EARLY_ADOPTERS)->update([
+        'body_format' => EmailTemplate::FORMAT_RAW_HTML,
         'subject_nl' => 'Welkom bij Innerr',
         'body_nl' => '<!doctype html><html><body><h1>Welkom!</h1><p>Hallo early adopter.</p><div class="pc-project-body">Tot snel.</div></body></html>',
     ]);
@@ -75,11 +73,11 @@ it('sends raw_html templates without the mail message wrapper, with a plain-text
         templateLocale: 'nl',
     );
 
-    expect($mailable->mailer)->toBe('postmark_broadcast');
+    expect($mailable->mailer)->toBeNull();
 
-    Mail::mailer($mailable->mailer)->to('jordan@example.test')->send($mailable);
+    Mail::to('jordan@example.test')->send($mailable);
 
-    $email = app('mail.manager')->mailer('postmark_broadcast')->getSymfonyTransport()->messages()[0]->getOriginalMessage();
+    $email = app('mailer')->getSymfonyTransport()->messages()[0]->getOriginalMessage();
 
     expect($email->getSubject())->toBe('Welkom bij Innerr')
         ->and($email->getHtmlBody())->toContain('pc-project-body')
@@ -87,6 +85,26 @@ it('sends raw_html templates without the mail message wrapper, with a plain-text
         ->and($email->getHtmlBody())->not->toContain('innerr-logo.png')
         ->and($email->getTextBody())->toContain('Welkom!')
         ->and($email->getTextBody())->toContain('Hallo early adopter.');
+});
+
+it('renders the early adopters mail as a markdown message with branded wrapper and signature', function () {
+    $mailable = new TestEmailTemplateMail(
+        templateKey: EmailTemplateRegistry::EARLY_ADOPTERS,
+        templateLocale: 'nl',
+    );
+
+    Mail::to('jordan@example.test')->send($mailable);
+
+    $email = app('mailer')->getSymfonyTransport()->messages()[0]->getOriginalMessage();
+    $body = $email->getHtmlBody();
+
+    expect($email->getSubject())->toBe('Welkom bij Innerr — early access')
+        ->and($body)->toContain('We hebben goed nieuws!')
+        ->and($body)->toContain('Wat maakt Innerr anders?')
+        ->and($body)->toContain('https://apps.apple.com/nl/app/innerr-priv')
+        ->and($body)->toContain('play.google.com/store/apps/details?id=com.innerr.app')
+        ->and($body)->toContain('Groetjes,')
+        ->and($body)->toContain('Nicky van Innerr');
 });
 
 it('sets a Reply-To header on outgoing mail when configured', function () {

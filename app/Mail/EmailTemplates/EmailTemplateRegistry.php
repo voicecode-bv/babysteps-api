@@ -218,15 +218,73 @@ class EmailTemplateRegistry
 
             self::EARLY_ADOPTERS => [
                 'label' => 'Early adopters welcome mail',
-                'description' => 'One-off HTML mail naar handmatig opgegeven ontvanger. Geen wrapper, geen auto-signature — afsluiting zit in de HTML zelf.',
-                'format' => EmailTemplate::FORMAT_RAW_HTML,
-                'mailer' => 'postmark_broadcast',
+                'description' => 'Welcome mail voor de wachtlijst-aanmeldingen. Wordt verstuurd via de standaard transactionele mailer.',
+                'format' => EmailTemplate::FORMAT_MARKDOWN_MESSAGE,
                 'placeholders' => [],
                 'samples' => [],
                 'defaults' => [
                     'nl' => [
                         'subject' => 'Welkom bij Innerr — early access',
-                        'body' => '',
+                        'body' => <<<'MD'
+# We hebben goed nieuws!
+
+En dat willen we graag met je delen, dus lees snel verder!
+
+## Een langgekoesterde wens gaat nu officieel van start!
+
+3,5 jaar geleden werden wij ouders van onze eerste dochter. En al snel kwamen de vragen: zet je haar op Instagram? Deel je foto's op Facebook? Ons antwoord: nee.
+
+Niet omdat we niets willen delen. Juist wel. Maar we willen zelf bepalen met wie en op een manier die veilig, leuk en persoonlijk voelt. Daarom hebben we Innerr gebouwd: een sociale tijdlijn met jouw foto's en video's, alleen voor jouw kringen.
+
+Je kunt liken, reageren, scrollen, net als je gewend bent. Geen race om likes of volgers, geen algoritme, geen advertenties én geen AI die meekijkt. Gewoon de mooiste momenten van je leven, gedeeld met de mensen die je liefhebt en die ertoe doen.
+
+## Jij bent extra waardevol voor ons
+
+Jij hebt je aangemeld om als eerste Innerr te proberen en dat betekent veel voor ons. Je bent de eerste die jouw kringen gaat aanmaken en delen met jouw familie en vrienden. Als bedankje dat je een early adopter bent van de app, **betaal jij nooit abonnementskosten**! Wij zijn blij met jou als onderdeel van Innerr.
+
+De feedback die jij geeft, bepaalt waar wij de komende tijd de app gaan verbeteren. Als er iets niet werkt, of je hebt een idee: reageer dan gerust op deze mail. Wij lezen en reageren op deze e-mails persoonlijk.
+
+We zijn op de achtergrond nog druk bezig met het verder ontwikkelen van de app. We zijn heel blij en trots op deze eerste versie. Voor de toekomst hebben we onder andere nog de volgende functies staan die we graag willen realiseren: meerdere foto's in één post (slider), fotoalbum/kalender kunnen laten bedrukken van je tijdlijn én meer goede doelen ondersteunen.
+
+Bedankt! Voor je vertrouwen en voor het meebouwen aan iets moois wat we al zo lang voor ogen hadden: **social media weer sociaal maken**.
+
+— Michael & Nicky Blijleven, oprichters Innerr
+
+## Jouw familiefoto's horen niet bij een algoritme
+
+Elke keer dat je een foto van je kind plaatst op Instagram of Facebook, wordt dat beeld geanalyseerd, gecategoriseerd en gebruikt om systemen te trainen — en je kunt er maar weinig aan doen.
+
+We bouwden Innerr omdat we een beter alternatief wilden. Een plek waar het delen van een foto van je kinderen voelt als het sturen van een brief aan de mensen van wie je houdt, niet als publiceren op internet.
+
+**Simpel. Privé. Van jou.**
+
+## Wat maakt Innerr anders?
+
+**Alleen privé kringen** — Maak meerdere kringen aan en bepaal zelf wie erin zit. Eén voor de grootouders, één voor vrienden, één voor de schoolklas, en niemand anders.
+
+**Geen advertenties** — Innerr is gebouwd voor families, niet voor adverteerders. Wij verkopen jouw data niet en tonen geen advertenties. Jij betaalt een eerlijke prijs, wij beschermen jouw waardevolle familiemomenten.
+
+**Nul AI op jouw foto's** — De gezichten van jou en jouw kinderen worden nooit gebruikt om AI-modellen te trainen. Geen gezichtsherkenning, geen automatische tags.
+
+**Gehost in de EU & AVG proof** — Alle data wordt opgeslagen op Europese servers, onder Europees recht. Jouw data is en blijft van jou. Download of verwijder alles wanneer je wilt.
+
+## Innerr geeft terug aan de kinderen
+
+Innerr doneert standaard 10% van elk betaald abonnement aan een Nederlandse ANBI-stichting die zich inzet voor zieke kinderen.
+
+Innerr is daarbij de donor, niet jij. Wij dragen het bedrag af, zodat een groter percentage daadwerkelijk bij de kinderen terechtkomt en niet bij een betaalprovider.
+
+## Meteen aan de slag?
+
+De app is beschikbaar voor iOS en Android.
+
+- [Download voor iOS](https://apps.apple.com/nl/app/innerr-priv%C3%A9-fotos-delen/id6761749591)
+- [Download voor Android](https://play.google.com/store/apps/details?id=com.innerr.app)
+
+## Heb je vragen of zorgen?
+
+Stuur gerust jouw vragen naar [hallo@innerr.app](mailto:hallo@innerr.app). Wij helpen je graag verder op weg.
+MD,
                     ],
                     'en' => ['subject' => '', 'body' => ''],
                     'fr' => ['subject' => '', 'body' => ''],
