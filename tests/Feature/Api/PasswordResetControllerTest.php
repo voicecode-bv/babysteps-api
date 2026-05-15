@@ -1,5 +1,7 @@
 <?php
 
+use App\Mail\EmailTemplates\EmailTemplateRegistry;
+use App\Models\EmailTemplate;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Notifications\ResetPassword;
@@ -21,9 +23,10 @@ it('sends a password reset notification with a frontend url', function () {
 
     Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use ($user) {
         $mail = $notification->toMail($user);
+        $body = (string) ($mail->viewData['body'] ?? '');
 
-        expect($mail->actionUrl)->toStartWith('https://innerr.app/password-reset?token=');
-        expect($mail->actionUrl)->toContain('&email=jane%40example.com');
+        expect($body)->toContain('https://innerr.app/password-reset?token=');
+        expect($body)->toContain('&email=jane%40example.com');
 
         return true;
     });
@@ -164,9 +167,42 @@ it('renders the reset email in the user locale', function () {
         // mirror that here so the assertion reflects what the recipient actually receives.
         App::setLocale($user->preferredLocale());
         $mail = $notification->toMail($user);
+        $body = (string) ($mail->viewData['body'] ?? '');
 
         expect($mail->subject)->toBe('Reset je wachtwoord');
-        expect($mail->actionText)->toBe('Wachtwoord resetten');
+        expect($body)->toContain('Wachtwoord resetten');
+        expect($body)->toContain('Deze resetlink verloopt over 60 minuten.');
+
+        return true;
+    });
+});
+
+it('uses the password reset email template from the database', function () {
+    config()->set('app.frontend_url', 'https://innerr.app');
+    Notification::fake();
+
+    EmailTemplate::query()
+        ->where('key', EmailTemplateRegistry::PASSWORD_RESET)
+        ->update([
+            'subject_en' => 'Custom subject',
+            'body_en' => '# Hi {recipient_name}!
+
+Click [here]({reset_url}) to reset (expires in {minutes} minutes).',
+        ]);
+
+    $user = User::factory()->create(['email' => 'jane@example.com', 'locale' => 'en', 'name' => 'Jane']);
+
+    $this->postJson('/api/auth/forgot-password', ['email' => 'jane@example.com'])->assertOk();
+
+    Notification::assertSentTo($user, ResetPassword::class, function (ResetPassword $notification) use ($user) {
+        App::setLocale($user->preferredLocale());
+        $mail = $notification->toMail($user);
+        $body = (string) ($mail->viewData['body'] ?? '');
+
+        expect($mail->subject)->toBe('Custom subject');
+        expect($body)->toContain('# Hi Jane!');
+        expect($body)->toContain('https://innerr.app/password-reset?token=');
+        expect($body)->toContain('expires in 60 minutes');
 
         return true;
     });

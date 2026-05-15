@@ -22,6 +22,8 @@ class EmailTemplateRegistry
 
     public const SUBSCRIPTION_STARTED = 'subscription_started';
 
+    public const PASSWORD_RESET = 'password_reset';
+
     /**
      * @return array<string, array{
      *     label: string,
@@ -228,6 +230,36 @@ class EmailTemplateRegistry
                     ],
                     'en' => ['subject' => '', 'body' => ''],
                     'fr' => ['subject' => '', 'body' => ''],
+                ],
+            ],
+
+            self::PASSWORD_RESET => [
+                'label' => 'Password reset',
+                'description' => 'Sent when a user requests a password reset link. The {reset_url} placeholder is required — it is the link the user clicks to set a new password.',
+                'format' => EmailTemplate::FORMAT_MARKDOWN_MESSAGE,
+                'placeholders' => [
+                    'recipient_name' => 'Name of the recipient.',
+                    'reset_url' => 'Link the user clicks to reset their password. Must be included as a markdown link.',
+                    'minutes' => 'Number of minutes the reset link stays valid.',
+                ],
+                'samples' => [
+                    'recipient_name' => 'Jordan',
+                    'reset_url' => 'https://innerr.app/password-reset?token=sample-token&email=jordan%40example.com',
+                    'minutes' => '60',
+                ],
+                'defaults' => [
+                    'nl' => [
+                        'subject' => 'Reset je wachtwoord',
+                        'body' => "# Hallo {recipient_name}!\n\nJe ontvangt deze e-mail omdat we een verzoek hebben gekregen om het wachtwoord van je account te resetten.\n\n[Wachtwoord resetten]({reset_url})\n\nDeze resetlink verloopt over {minutes} minuten.\n\nHeb je geen wachtwoord-reset aangevraagd? Dan hoef je niets te doen.",
+                    ],
+                    'en' => [
+                        'subject' => 'Reset your password',
+                        'body' => "# Hello {recipient_name}!\n\nYou are receiving this email because we received a password reset request for your account.\n\n[Reset Password]({reset_url})\n\nThis password reset link will expire in {minutes} minutes.\n\nIf you did not request a password reset, no further action is required.",
+                    ],
+                    'fr' => [
+                        'subject' => 'Réinitialisez votre mot de passe',
+                        'body' => "# Bonjour {recipient_name} !\n\nVous recevez cet e-mail parce que nous avons reçu une demande de réinitialisation du mot de passe de votre compte.\n\n[Réinitialiser le mot de passe]({reset_url})\n\nCe lien de réinitialisation expirera dans {minutes} minutes.\n\nSi vous n'avez pas demandé de réinitialisation, aucune action n'est requise.",
+                    ],
                 ],
             ],
 

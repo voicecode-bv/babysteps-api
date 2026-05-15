@@ -6,6 +6,8 @@ use App\Events\SubscriptionStatusChanged;
 use App\Listeners\InvalidateUserPlanCache;
 use App\Listeners\PruneInvalidFcmTokens;
 use App\Listeners\SendSubscriptionStartedMail;
+use App\Mail\EmailTemplates\EmailTemplateRegistry;
+use App\Mail\EmailTemplates\EmailTemplateRenderer;
 use App\Models\Subscription;
 use App\Observers\SubscriptionObserver;
 use App\Services\Subscriptions\Apple\AppleJwsVerifier;
@@ -19,10 +21,13 @@ use App\Services\Subscriptions\Google\GoogleAccessTokenClient;
 use App\Services\Subscriptions\Google\PlayDeveloperApi;
 use App\Services\Subscriptions\Google\PubSubOidcVerifier;
 use Illuminate\Auth\Notifications\ResetPassword;
+use Illuminate\Contracts\Auth\CanResetPassword;
 use Illuminate\Contracts\Cache\Repository as CacheRepository;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Contracts\Translation\HasLocalePreference;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Notifications\Events\NotificationFailed;
+use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\ServiceProvider;
 use MatanYadaev\EloquentSpatial\EloquentSpatial;
@@ -134,14 +139,36 @@ class AppServiceProvider extends ServiceProvider
         $events->listen(NotificationFailed::class, PruneInvalidFcmTokens::class);
         Subscription::observe(SubscriptionObserver::class);
 
-        ResetPassword::createUrlUsing(function ($user, string $token): string {
-            return rtrim((string) config('app.frontend_url'), '/')
-                .'/password-reset?token='.$token
-                .'&email='.urlencode($user->getEmailForPasswordReset());
+        ResetPassword::createUrlUsing(fn (CanResetPassword $user, string $token): string => $this->passwordResetUrl($user, $token));
+
+        ResetPassword::toMailUsing(function (CanResetPassword $user, string $token): MailMessage {
+            $broker = (string) config('auth.defaults.passwords');
+            $minutes = (int) config("auth.passwords.{$broker}.expire");
+
+            $rendered = app(EmailTemplateRenderer::class)->render(
+                EmailTemplateRegistry::PASSWORD_RESET,
+                [
+                    'recipient_name' => $user->name ?? '',
+                    'reset_url' => $this->passwordResetUrl($user, $token),
+                    'minutes' => $minutes,
+                ],
+                $user instanceof HasLocalePreference ? $user->preferredLocale() : null,
+            );
+
+            return (new MailMessage)
+                ->subject($rendered['subject'])
+                ->markdown('emails.templated', ['body' => $rendered['body']]);
         });
 
         if ($replyToAddress = (string) config('mail.reply_to.address', '')) {
             Mail::alwaysReplyTo($replyToAddress, (string) config('mail.reply_to.name', ''));
         }
+    }
+
+    private function passwordResetUrl(CanResetPassword $user, string $token): string
+    {
+        return rtrim((string) config('app.frontend_url'), '/')
+            .'/password-reset?token='.$token
+            .'&email='.urlencode($user->getEmailForPasswordReset());
     }
 }
