@@ -259,13 +259,25 @@ class MediaUploadService
             return null;
         }
 
-        $tempSource = tempnam(sys_get_temp_dir(), 'src_');
+        $extension = strtolower(pathinfo($sourcePath, PATHINFO_EXTENSION));
+        $isHeic = in_array($extension, ['heic', 'heif'], true);
+
+        $tempSource = tempnam(sys_get_temp_dir(), 'src_').'.'.($extension ?: 'bin');
         file_put_contents($tempSource, $disk->get($sourcePath));
+
+        $decodeSource = $tempSource;
+        $tempHeicJpeg = null;
+
+        if ($isHeic) {
+            $tempHeicJpeg = tempnam(sys_get_temp_dir(), 'src_heic_').'.jpg';
+            self::decodeHeicToJpeg($tempSource, $tempHeicJpeg);
+            $decodeSource = $tempHeicJpeg;
+        }
 
         $tempThumb = tempnam(sys_get_temp_dir(), 'thumb_').'.jpg';
 
         try {
-            $image = Image::decodePath($tempSource);
+            $image = Image::decodePath($decodeSource);
             $image->orient();
             $image->cover($size, $size);
             $image->save($tempThumb, quality: self::DISPLAY_QUALITY);
@@ -282,6 +294,10 @@ class MediaUploadService
         } finally {
             @unlink($tempSource);
             @unlink($tempThumb);
+
+            if ($tempHeicJpeg !== null) {
+                @unlink($tempHeicJpeg);
+            }
         }
     }
 
@@ -369,24 +385,13 @@ class MediaUploadService
             return $file;
         }
 
-        // Use heif-convert (libheif 1.19+) for HEIC conversion because the
-        // PHP Imagick extension cannot decode HEIC reliably. Requires
-        // libheif-examples: sudo apt-get install libheif-examples
         $heicPath = tempnam(sys_get_temp_dir(), 'heic_').'.'.$extension;
         copy($file->getPathname(), $heicPath);
 
         $jpegPath = tempnam(sys_get_temp_dir(), 'heic_').'.jpg';
 
         try {
-            $result = Process::run([
-                'heif-convert', '-q', '90', $heicPath, $jpegPath,
-            ]);
-
-            if ($result->failed() || ! file_exists($jpegPath)) {
-                throw new \RuntimeException(
-                    'HEIC to JPEG conversion failed: '.$result->errorOutput()
-                );
-            }
+            self::decodeHeicToJpeg($heicPath, $jpegPath);
         } finally {
             @unlink($heicPath);
         }
@@ -398,5 +403,54 @@ class MediaUploadService
             null,
             true,
         );
+    }
+
+    /**
+     * Decode a HEIC/HEIF file to a baseline JPEG at $jpegPath.
+     *
+     * Prefers Imagick because libheif inside ImageMagick reconciles the
+     * HEIF container's `irot`/`imir` transforms with the embedded EXIF
+     * Orientation tag — both end up consistent (Orientation = 1) in the
+     * resulting JPEG. The `heif-convert` CLI keeps the original EXIF tag
+     * intact while libheif has already rotated the pixels, which causes
+     * downstream rotators to apply a phantom second rotation.
+     */
+    public static function decodeHeicToJpeg(string $heicPath, string $jpegPath): void
+    {
+        if (class_exists(\Imagick::class) && in_array('HEIC', \Imagick::queryFormats('HEIC'), true)) {
+            $im = new \Imagick($heicPath);
+
+            try {
+                $im->setImageFormat('jpeg');
+                $im->setImageCompressionQuality(90);
+                $im->writeImage($jpegPath);
+            } finally {
+                $im->clear();
+            }
+
+            return;
+        }
+
+        $result = Process::run(['heif-convert', '-q', '90', $heicPath, $jpegPath]);
+
+        if ($result->failed() || ! file_exists($jpegPath)) {
+            throw new \RuntimeException(
+                'HEIC to JPEG conversion failed. Install ImageMagick with libheif support, or libheif-examples for the heif-convert fallback. '.$result->errorOutput()
+            );
+        }
+
+        // heif-convert leaves the source EXIF Orientation intact even though
+        // libheif already applied the container rotation. Reset the tag so
+        // the downstream pipeline does not rotate the pixels a second time.
+        if (class_exists(\Imagick::class)) {
+            $im = new \Imagick($jpegPath);
+
+            try {
+                $im->setImageOrientation(\Imagick::ORIENTATION_TOPLEFT);
+                $im->writeImage($jpegPath);
+            } finally {
+                $im->clear();
+            }
+        }
     }
 }
