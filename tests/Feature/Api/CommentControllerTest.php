@@ -194,6 +194,89 @@ it('silently filters hidden comments without placeholders for old clients (no X-
     expect($response->json('data.0.user'))->toBeArray();
 });
 
+it('shows comments to a circle owner who is not in the circle_user pivot (v2 client)', function () {
+    // Reproductie van het productiescenario: de viewer is owner van de circle
+    // (circles.user_id), niet geattached via circle_user. Zonder de fix
+    // verschijnen comments van members als "verborgen" voor de owner.
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $post = Post::factory()->create();
+    shareCircleOwnedBy($post, $owner, $member);
+
+    Comment::factory()->create([
+        'post_id' => $post->id,
+        'user_id' => $member->id,
+        'body' => 'Hi from member',
+    ]);
+
+    $this->actingAs($owner)
+        ->withHeaders(['X-App-Version' => '1.1.0'])
+        ->getJson("/api/posts/{$post->id}/comments")
+        ->assertOk()
+        ->assertJsonPath('data.0.is_visible', true)
+        ->assertJsonPath('data.0.body', 'Hi from member');
+});
+
+it('shows a member the comments of the circle owner (v2 client)', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $post = Post::factory()->create();
+    shareCircleOwnedBy($post, $owner, $member);
+
+    Comment::factory()->create([
+        'post_id' => $post->id,
+        'user_id' => $owner->id,
+        'body' => 'Hi from owner',
+    ]);
+
+    $this->actingAs($member)
+        ->withHeaders(['X-App-Version' => '1.1.0'])
+        ->getJson("/api/posts/{$post->id}/comments")
+        ->assertOk()
+        ->assertJsonPath('data.0.is_visible', true)
+        ->assertJsonPath('data.0.body', 'Hi from owner');
+});
+
+it('shows comments to a circle owner who is not in the circle_user pivot (old client)', function () {
+    // Zelfde scenario maar zonder X-App-Version: oude SPA pad. Zonder de fix
+    // ziet de viewer alleen eigen reacties; dit dekt precies de productiebug.
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $post = Post::factory()->create();
+    shareCircleOwnedBy($post, $owner, $member);
+
+    Comment::factory()->create([
+        'post_id' => $post->id,
+        'user_id' => $member->id,
+        'body' => 'Hi from member',
+    ]);
+
+    $this->actingAs($owner)
+        ->getJson("/api/posts/{$post->id}/comments")
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.body', 'Hi from member');
+});
+
+it('shows a member the comments of the circle owner (old client)', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $post = Post::factory()->create();
+    shareCircleOwnedBy($post, $owner, $member);
+
+    Comment::factory()->create([
+        'post_id' => $post->id,
+        'user_id' => $owner->id,
+        'body' => 'Hi from owner',
+    ]);
+
+    $this->actingAs($member)
+        ->getJson("/api/posts/{$post->id}/comments")
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.body', 'Hi from owner');
+});
+
 it('treats clients with X-App-Version below the v2 threshold as old clients', function () {
     $viewer = User::factory()->create();
     $insider = User::factory()->create();

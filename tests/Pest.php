@@ -53,15 +53,33 @@ function something()
 }
 
 /**
- * Koppelt een nieuwe circle aan een post en zet de opgegeven users als members.
- * Helpt tests om snel de "viewer en auteur delen een circle"-precondition op te
- * zetten die de comments-index endpoint vereist voor zichtbaarheid.
+ * Koppelt een nieuwe circle aan een post en zet de opgegeven users als members
+ * (via circle_user pivot). De circle-owner is een wegwerp-User die geen rol
+ * speelt in de test.
  */
 function shareCircle(Post $post, User ...$users): Circle
 {
     $circle = Circle::factory()->create();
     $post->circles()->attach($circle);
     $circle->members()->attach(collect($users)->pluck('id')->all());
+
+    return $circle;
+}
+
+/**
+ * Koppelt een nieuwe circle aan een post met $owner als owner
+ * (circles.user_id) en de overige $members via circle_user pivot. Bedoeld om
+ * het productie-model te repliceren waar de circle-aanmaker NIET in
+ * circle_user pivot zit.
+ */
+function shareCircleOwnedBy(Post $post, User $owner, User ...$members): Circle
+{
+    $circle = Circle::factory()->create(['user_id' => $owner->id]);
+    $post->circles()->attach($circle);
+
+    if ($members !== []) {
+        $circle->members()->attach(collect($members)->pluck('id')->all());
+    }
 
     return $circle;
 }

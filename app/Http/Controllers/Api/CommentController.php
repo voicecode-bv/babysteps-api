@@ -60,8 +60,14 @@ class CommentController extends Controller
 
         // Circles waar zowel de viewer als de post lid van zijn — de set
         // waarbinnen een comment-author "gedeeld" mag zijn met de viewer.
+        // Een user "is in" een circle als ze owner (circles.user_id) zijn
+        // of als member geattached zijn (circle_user pivot). Owners zitten
+        // niet automatisch in circle_user, dus beide paden moeten gechecked.
         $sharedCircleIds = $post->circles()
-            ->whereHas('members', fn ($q) => $q->where('users.id', $userId))
+            ->where(function ($q) use ($userId) {
+                $q->where('circles.user_id', $userId)
+                    ->orWhereHas('members', fn ($m) => $m->where('users.id', $userId));
+            })
             ->pluck('circles.id');
 
         $clientVersion = (string) $request->header('X-App-Version', '0.0.0');
@@ -87,10 +93,15 @@ class CommentController extends Controller
 
                 if ($sharedCircleIds->isNotEmpty()) {
                     $q->orWhereIn('user_id', function ($sub) use ($sharedCircleIds) {
+                        // Members van gedeelde circles
                         $sub->select('user_id')
                             ->from('circle_user')
-                            ->whereIn('circle_id', $sharedCircleIds)
-                            ->distinct();
+                            ->whereIn('circle_id', $sharedCircleIds);
+                    })->orWhereIn('user_id', function ($sub) use ($sharedCircleIds) {
+                        // Owners van gedeelde circles
+                        $sub->select('user_id')
+                            ->from('circles')
+                            ->whereIn('id', $sharedCircleIds);
                     });
                 }
             });
@@ -104,16 +115,25 @@ class CommentController extends Controller
 
         // Bulk-lookup: welke auteurs op deze pagina delen minstens één
         // gedeelde-circle met de viewer? Eigen comments zijn altijd zichtbaar.
+        // Beide paden (member + owner) meenemen, idem als bij sharedCircleIds.
         $authorIds = $paginated->getCollection()->pluck('user_id')->unique();
 
-        $visibleAuthorIds = $sharedCircleIds->isEmpty()
-            ? collect([$userId])
-            : DB::table('circle_user')
+        if ($sharedCircleIds->isEmpty()) {
+            $visibleAuthorIds = collect([$userId]);
+        } else {
+            $memberIds = DB::table('circle_user')
                 ->whereIn('user_id', $authorIds)
                 ->whereIn('circle_id', $sharedCircleIds)
                 ->distinct()
-                ->pluck('user_id')
-                ->push($userId);
+                ->pluck('user_id');
+
+            $ownerIds = DB::table('circles')
+                ->whereIn('user_id', $authorIds)
+                ->whereIn('id', $sharedCircleIds)
+                ->pluck('user_id');
+
+            $visibleAuthorIds = $memberIds->concat($ownerIds)->unique()->push($userId);
+        }
 
         $visibleSet = $visibleAuthorIds->flip();
 
