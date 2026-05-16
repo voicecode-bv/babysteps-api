@@ -8,7 +8,9 @@ use App\Listeners\PruneInvalidFcmTokens;
 use App\Listeners\SendSubscriptionStartedMail;
 use App\Mail\EmailTemplates\EmailTemplateRegistry;
 use App\Mail\EmailTemplates\EmailTemplateRenderer;
+use App\Models\PostMedia;
 use App\Models\Subscription;
+use App\Observers\PostMediaObserver;
 use App\Observers\SubscriptionObserver;
 use App\Services\Subscriptions\Apple\AppleJwsVerifier;
 use App\Services\Subscriptions\Apple\AppStoreServerApi;
@@ -138,6 +140,7 @@ class AppServiceProvider extends ServiceProvider
         $events->listen(SubscriptionStatusChanged::class, SendSubscriptionStartedMail::class);
         $events->listen(NotificationFailed::class, PruneInvalidFcmTokens::class);
         Subscription::observe(SubscriptionObserver::class);
+        PostMedia::observe(PostMediaObserver::class);
 
         ResetPassword::createUrlUsing(fn (CanResetPassword $user, string $token): string => $this->passwordResetUrl($user, $token));
 

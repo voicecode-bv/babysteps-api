@@ -1,0 +1,227 @@
+<?php
+
+use App\Jobs\TranscodeVideo;
+use App\Models\Circle;
+use App\Models\Post;
+use App\Models\PostMedia;
+use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Storage;
+
+it('stores a post with multiple photos and creates ordered post_media rows', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->postJson('/api/posts', [
+            'media' => [
+                UploadedFile::fake()->image('a.jpg'),
+                UploadedFile::fake()->image('b.jpg'),
+                UploadedFile::fake()->image('c.jpg'),
+            ],
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertCreated()
+        ->assertJsonPath('data.media_type', 'image')
+        ->assertJsonCount(3, 'data.media');
+
+    $post = Post::first();
+    $items = $post->media()->orderBy('sort_order')->get();
+
+    expect($items)->toHaveCount(3)
+        ->and($items->pluck('sort_order')->all())->toBe([0, 1, 2])
+        ->and($items->pluck('type')->all())->toBe(['image', 'image', 'image']);
+
+    // Shadow columns mirror the first item.
+    expect($post->media_url)->toBe($items->first()->path)
+        ->and($post->thumbnail_small_url)->toBe($items->first()->thumbnail_small_path);
+});
+
+it('merges client-provided metadata with extracted EXIF per item', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->postJson('/api/posts', [
+            'media' => [
+                UploadedFile::fake()->image('a.jpg'),
+                UploadedFile::fake()->image('b.jpg'),
+            ],
+            'media_metadata' => json_encode([
+                ['taken_at' => '2025-01-01T10:00:00Z', 'latitude' => 52.37, 'longitude' => 4.89],
+                ['latitude' => 48.85, 'longitude' => 2.35],
+            ]),
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertCreated();
+
+    $items = Post::first()->media()->orderBy('sort_order')->get();
+
+    expect($items[0]->latitude)->toBe(52.37)
+        ->and($items[0]->longitude)->toBe(4.89)
+        ->and($items[0]->taken_at?->toIso8601String())->toBe('2025-01-01T10:00:00+00:00')
+        ->and($items[1]->latitude)->toBe(48.85)
+        ->and($items[1]->longitude)->toBe(2.35)
+        ->and($items[1]->taken_at)->toBeNull();
+});
+
+it('rejects mixing video and photos in one post', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->postJson('/api/posts', [
+            'media' => [
+                UploadedFile::fake()->image('a.jpg'),
+                UploadedFile::fake()->create('clip.mp4', 1024, 'video/mp4'),
+            ],
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('media.1');
+});
+
+it('rejects more than 10 media items', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create(['user_id' => $user->id]);
+
+    $media = [];
+    for ($i = 0; $i < 11; $i++) {
+        $media[] = UploadedFile::fake()->image("a{$i}.jpg");
+    }
+
+    $this->actingAs($user)
+        ->postJson('/api/posts', [
+            'media' => $media,
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('media');
+});
+
+it('exposes the media[] array in PostResource ordered by sort_order', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->postJson('/api/posts', [
+            'media' => [
+                UploadedFile::fake()->image('a.jpg'),
+                UploadedFile::fake()->image('b.jpg'),
+            ],
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertCreated();
+
+    $postId = Post::first()->id;
+
+    $response = $this->actingAs($user)
+        ->getJson("/api/posts/{$postId}")
+        ->assertOk()
+        ->json('data.media');
+
+    expect($response)->toHaveCount(2)
+        ->and($response[0]['sort_order'])->toBe(0)
+        ->and($response[1]['sort_order'])->toBe(1)
+        ->and($response[0])->toHaveKeys(['id', 'url', 'type', 'status', 'thumbnail_small_url', 'taken_at']);
+});
+
+it('cascades media deletion when deleting a post', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->postJson('/api/posts', [
+            'media' => [
+                UploadedFile::fake()->image('a.jpg'),
+                UploadedFile::fake()->image('b.jpg'),
+            ],
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertCreated();
+
+    $post = Post::first();
+    $paths = $post->media()->pluck('path')->all();
+
+    foreach ($paths as $path) {
+        Storage::disk('public')->assertExists($path);
+    }
+
+    $this->actingAs($user)
+        ->deleteJson("/api/posts/{$post->id}")
+        ->assertNoContent();
+
+    expect(PostMedia::query()->where('post_id', $post->id)->exists())->toBeFalse();
+
+    foreach ($paths as $path) {
+        Storage::disk('public')->assertMissing($path);
+    }
+});
+
+it('keeps single-mode posts working with one post_media row', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->postJson('/api/posts', [
+            'media' => UploadedFile::fake()->image('legacy.jpg'),
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertCreated()
+        ->assertJsonCount(1, 'data.media')
+        ->assertJsonPath('data.media.0.sort_order', 0);
+
+    $post = Post::first();
+
+    expect($post->media)->toHaveCount(1)
+        ->and($post->media_url)->toBe($post->media->first()->path);
+});
+
+it('dispatches TranscodeVideo for each video item with the PostMedia model', function () {
+    Bus::fake();
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->postJson('/api/posts', [
+            'media' => UploadedFile::fake()->create('clip.mp4', 1024, 'video/mp4'),
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertCreated();
+
+    Bus::assertDispatched(TranscodeVideo::class, function (TranscodeVideo $job) {
+        return $job->postMedia instanceof PostMedia;
+    });
+});
+
+it('observer syncs shadow columns when the primary post_media item changes', function () {
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->postJson('/api/posts', [
+            'media' => [
+                UploadedFile::fake()->image('a.jpg'),
+                UploadedFile::fake()->image('b.jpg'),
+            ],
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertCreated();
+
+    $post = Post::first();
+    $primary = $post->media()->where('sort_order', 0)->first();
+
+    $primary->update(['path' => 'users/new/path.jpg']);
+
+    expect($post->fresh()->media_url)->toBe('users/new/path.jpg');
+});

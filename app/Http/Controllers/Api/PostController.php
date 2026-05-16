@@ -10,6 +10,7 @@ use App\Http\Resources\PostResource;
 use App\Jobs\TranscodeVideo;
 use App\Models\Person;
 use App\Models\Post;
+use App\Models\PostMedia;
 use App\Models\User;
 use App\Notifications\NewCirclePost;
 use App\Notifications\PostTagged;
@@ -19,6 +20,7 @@ use App\Support\UserStorage;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Notification;
 use MatanYadaev\EloquentSpatial\Enums\Srid;
 use MatanYadaev\EloquentSpatial\Objects\Point;
@@ -55,6 +57,7 @@ class PostController extends Controller
     {
         $relations = [
             'user:id,name,username,avatar',
+            'media',
             'persons:id,name,birthdate,avatar_thumbnail,user_id', 'persons.user:id,username',
             'comments' => fn ($query) => $query->oldest()
                 ->with('user:id,name,username,avatar')
@@ -114,57 +117,45 @@ class PostController extends Controller
     )]
     public function store(StorePostRequest $request, MediaUploadService $media): JsonResponse
     {
-        $file = $request->file('media');
+        $files = $this->normalizeMediaFiles($request);
+        $perItemMetadata = $this->resolvePerItemMetadata($request, count($files));
 
-        $mimeType = $file->getMimeType();
-        $mediaType = str_starts_with((string) $mimeType, 'video/') ? 'video' : 'image';
+        $userId = $request->user()->id;
+        $processed = [];
 
-        $thumbnailPath = null;
-        $thumbnailSmallPath = null;
-        $mediaStatus = MediaStatus::Ready;
-        $exif = ['taken_at' => null, 'latitude' => null, 'longitude' => null];
-
-        if ($mediaType === 'video') {
-            // Generate the thumbnail from the local upload before the file
-            // is stored — avoids a round-trip download from storage.
-            $thumbnailPath = $media->generateVideoThumbnail(
-                $file->getPathname(), $request->user()->id, 'posts', isLocalPath: true,
-            );
-
-            // Store the original video directly (no transcoding yet).
-            // The TranscodeVideo job will replace it with the transcoded version.
-            $path = $file->store("users/{$request->user()->id}/posts");
-            UserStorage::trackPut($path);
-            $mediaStatus = MediaStatus::Processing;
-        } else {
-            // Read EXIF before MediaUploadService runs — convertHeicToJpeg may
-            // replace the UploadedFile, and Intervention strips EXIF on save.
-            $exif = ExifExtractor::fromUploadedFile($file);
-
-            $thumbnailPath = $media->generateImageThumbnail($file, $request->user()->id, 'posts');
-            $thumbnailSmallPath = $media->generateImageThumbnail($file, $request->user()->id, 'posts', size: MediaUploadService::THUMBNAIL_SIZE_SMALL);
-            $path = $media->store($file, $request->user()->id, 'posts');
+        foreach ($files as $index => $file) {
+            $processed[] = $this->processMediaFile($file, $userId, $perItemMetadata[$index], $media);
         }
 
-        $latitude = $request->validated('latitude') ?? $exif['latitude'];
-        $longitude = $request->validated('longitude') ?? $exif['longitude'];
+        $first = $processed[0];
 
         $post = $request->user()->posts()->create([
-            'media_url' => $path,
-            'media_type' => $mediaType,
-            'media_status' => $mediaStatus,
-            'thumbnail_url' => $thumbnailPath,
-            'thumbnail_small_url' => $thumbnailSmallPath,
+            'media_url' => $first['path'],
+            'media_type' => $first['type'],
+            'media_status' => $first['status'],
+            'thumbnail_url' => $first['thumbnail_path'],
+            'thumbnail_small_url' => $first['thumbnail_small_path'],
             'caption' => $request->validated('caption'),
             'location' => $request->validated('location'),
-            'taken_at' => $request->validated('taken_at') ?? $exif['taken_at'],
-            'coordinates' => ($latitude !== null && $longitude !== null)
-                ? new Point((float) $latitude, (float) $longitude, Srid::WGS84->value)
-                : null,
+            'taken_at' => $first['taken_at'],
+            'coordinates' => $first['coordinates'],
         ]);
 
-        if ($mediaType === 'video') {
-            TranscodeVideo::dispatch($post);
+        foreach ($processed as $index => $data) {
+            $postMedia = $post->media()->create([
+                'sort_order' => $index,
+                'path' => $data['path'],
+                'type' => $data['type'],
+                'status' => $data['status'],
+                'thumbnail_path' => $data['thumbnail_path'],
+                'thumbnail_small_path' => $data['thumbnail_small_path'],
+                'taken_at' => $data['taken_at'],
+                'coordinates' => $data['coordinates'],
+            ]);
+
+            if ($data['type'] === 'video') {
+                TranscodeVideo::dispatch($postMedia);
+            }
         }
 
         $circleIds = $request->validated('circle_ids');
@@ -205,11 +196,105 @@ class PostController extends Controller
                 });
         }
 
-        $post->load('user:id,name,username,avatar');
+        $post->load(['user:id,name,username,avatar', 'media']);
 
         return (new PostResource($post))
             ->response()
             ->setStatusCode(201);
+    }
+
+    /**
+     * @return list<UploadedFile>
+     */
+    private function normalizeMediaFiles(StorePostRequest $request): array
+    {
+        $files = $request->file('media');
+
+        return is_array($files) ? array_values($files) : [$files];
+    }
+
+    /**
+     * For single mode the top-level taken_at/lat/lng act as per-item metadata
+     * for the only file. For array mode we use the per-index entries from
+     * media_metadata (missing indices become empty arrays). Client values
+     * win over server-extracted EXIF in both modes.
+     *
+     * @return list<array{taken_at: ?string, latitude: ?float, longitude: ?float}>
+     */
+    private function resolvePerItemMetadata(StorePostRequest $request, int $count): array
+    {
+        if (! $request->isMultiMedia()) {
+            return [[
+                'taken_at' => $request->validated('taken_at'),
+                'latitude' => $request->validated('latitude'),
+                'longitude' => $request->validated('longitude'),
+            ]];
+        }
+
+        $metadata = $request->validated('media_metadata') ?? [];
+        $result = [];
+
+        for ($i = 0; $i < $count; $i++) {
+            $entry = $metadata[$i] ?? [];
+            $result[] = [
+                'taken_at' => $entry['taken_at'] ?? null,
+                'latitude' => $entry['latitude'] ?? null,
+                'longitude' => $entry['longitude'] ?? null,
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Process one uploaded file: store it, generate thumbnails, extract EXIF
+     * for images. Client-provided metadata overrides extracted values.
+     *
+     * @param  array{taken_at: ?string, latitude: ?float, longitude: ?float}  $clientMeta
+     * @return array{path: string, type: string, status: MediaStatus, thumbnail_path: ?string, thumbnail_small_path: ?string, taken_at: mixed, coordinates: ?Point}
+     */
+    private function processMediaFile(UploadedFile $file, string $userId, array $clientMeta, MediaUploadService $media): array
+    {
+        $mimeType = $file->getMimeType();
+        $type = str_starts_with((string) $mimeType, 'video/') ? 'video' : 'image';
+
+        $thumbnailPath = null;
+        $thumbnailSmallPath = null;
+        $status = MediaStatus::Ready;
+        $extracted = ['taken_at' => null, 'latitude' => null, 'longitude' => null];
+
+        if ($type === 'video') {
+            $thumbnailPath = $media->generateVideoThumbnail(
+                $file->getPathname(), $userId, 'posts', isLocalPath: true,
+            );
+
+            $path = $file->store("users/{$userId}/posts");
+            UserStorage::trackPut($path);
+            $status = MediaStatus::Processing;
+        } else {
+            // EXIF before MediaUploadService runs — convertHeicToJpeg may
+            // replace the UploadedFile and Intervention strips EXIF on save.
+            $extracted = ExifExtractor::fromUploadedFile($file);
+
+            $thumbnailPath = $media->generateImageThumbnail($file, $userId, 'posts');
+            $thumbnailSmallPath = $media->generateImageThumbnail($file, $userId, 'posts', size: MediaUploadService::THUMBNAIL_SIZE_SMALL);
+            $path = $media->store($file, $userId, 'posts');
+        }
+
+        $latitude = $clientMeta['latitude'] ?? $extracted['latitude'];
+        $longitude = $clientMeta['longitude'] ?? $extracted['longitude'];
+
+        return [
+            'path' => $path,
+            'type' => $type,
+            'status' => $status,
+            'thumbnail_path' => $thumbnailPath,
+            'thumbnail_small_path' => $thumbnailSmallPath,
+            'taken_at' => $clientMeta['taken_at'] ?? $extracted['taken_at'],
+            'coordinates' => ($latitude !== null && $longitude !== null)
+                ? new Point((float) $latitude, (float) $longitude, Srid::WGS84->value)
+                : null,
+        ];
     }
 
     #[OA\Put(
@@ -289,6 +374,7 @@ class PostController extends Controller
 
         $post->load([
             'user:id,name,username,avatar',
+            'media',
             'circles:id,name,photo',
             'tags:id,name',
             'persons:id,name,birthdate,avatar_thumbnail,user_id', 'persons.user:id,username',
@@ -317,9 +403,23 @@ class PostController extends Controller
     {
         $this->authorize('delete', $post);
 
-        $media->delete($post->media_url);
-        $media->delete($post->thumbnail_url);
-        $media->delete($post->thumbnail_small_url);
+        // Multi-photo: each PostMedia row has its own paths/thumbnails. The
+        // DB-level FK cascade deletes the rows, but storage files must be
+        // wiped explicitly. Use the relation when present, fall back to the
+        // post's shadow columns for legacy rows missing the relation.
+        $items = $post->media()->get();
+
+        if ($items->isEmpty()) {
+            $media->delete($post->media_url);
+            $media->delete($post->thumbnail_url);
+            $media->delete($post->thumbnail_small_url);
+        } else {
+            foreach ($items as $item) {
+                $media->delete($item->path);
+                $media->delete($item->thumbnail_path);
+                $media->delete($item->thumbnail_small_path);
+            }
+        }
 
         $post->delete();
 
@@ -370,6 +470,7 @@ class PostController extends Controller
 
         $post->load([
             'user:id,name,username,avatar',
+            'media',
             'circles:id,name,photo',
             'tags:id,name',
             'persons:id,name,birthdate,avatar_thumbnail,user_id', 'persons.user:id,username',

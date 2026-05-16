@@ -3,7 +3,7 @@
 namespace App\Jobs;
 
 use App\Enums\MediaStatus;
-use App\Models\Post;
+use App\Models\PostMedia;
 use App\Services\MediaUploadService;
 use App\Support\MediaUrl;
 use App\Support\UserStorage;
@@ -20,35 +20,28 @@ class TranscodeVideo implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    /**
-     * The number of times the job may be attempted.
-     */
     public int $tries = 2;
 
-    /**
-     * The maximum number of seconds the job can run.
-     */
     public int $timeout = 600;
 
     public function __construct(
-        public Post $post,
+        public PostMedia $postMedia,
     ) {}
 
     public function handle(MediaUploadService $media): void
     {
         $disk = MediaUrl::disk();
-        $originalPath = $this->post->media_url;
+        $originalPath = $this->postMedia->path;
 
         if (! $disk->exists($originalPath)) {
-            Log::error("TranscodeVideo: source file not found for post {$this->post->id}", [
+            Log::error("TranscodeVideo: source file not found for post media {$this->postMedia->id}", [
                 'path' => $originalPath,
             ]);
-            $this->post->update(['media_status' => MediaStatus::Failed]);
+            $this->postMedia->update(['status' => MediaStatus::Failed]);
 
             return;
         }
 
-        // Download the original to a temp file for FFmpeg.
         $tempInput = tempnam(sys_get_temp_dir(), 'transcode_in_');
         file_put_contents($tempInput, $disk->get($originalPath));
 
@@ -71,25 +64,24 @@ class TranscodeVideo implements ShouldQueue
             ]);
 
             if ($result->failed() || ! file_exists($tempOutput) || filesize($tempOutput) === 0) {
-                Log::error("TranscodeVideo: FFmpeg failed for post {$this->post->id}", [
+                Log::error("TranscodeVideo: FFmpeg failed for post media {$this->postMedia->id}", [
                     'stderr' => $result->errorOutput(),
                 ]);
 
-                // Keep the original as-is; mark as ready so the user can still view it.
-                $this->post->update(['media_status' => MediaStatus::Ready]);
+                // Keep the original; mark ready so the user can still view it.
+                $this->postMedia->update(['status' => MediaStatus::Ready]);
 
                 return;
             }
 
-            // Store the transcoded file and move the original to the originals folder.
-            $userFolder = "users/{$this->post->user_id}";
+            $userId = $this->postMedia->post->user_id;
+            $userFolder = "users/{$userId}";
             $transcodedFilename = Str::random(40).'.mp4';
             $transcodedPath = "{$userFolder}/posts/{$transcodedFilename}";
 
             $disk->put($transcodedPath, file_get_contents($tempOutput));
             UserStorage::trackPut($transcodedPath, $disk);
 
-            // Move the original to the originals folder (if it isn't there already).
             if (! str_contains($originalPath, '/originals/')) {
                 $originalExtension = pathinfo($originalPath, PATHINFO_EXTENSION) ?: 'mp4';
                 $originalFilename = Str::random(40).'.'.$originalExtension;
@@ -98,17 +90,16 @@ class TranscodeVideo implements ShouldQueue
                 $disk->move($originalPath, $archivedPath);
             }
 
-            $this->post->update([
-                'media_url' => $transcodedPath,
-                'media_status' => MediaStatus::Ready,
+            $this->postMedia->update([
+                'path' => $transcodedPath,
+                'status' => MediaStatus::Ready,
             ]);
         } catch (\Throwable $e) {
-            Log::error("TranscodeVideo: exception for post {$this->post->id}", [
+            Log::error("TranscodeVideo: exception for post media {$this->postMedia->id}", [
                 'message' => $e->getMessage(),
             ]);
 
-            // On failure, mark ready anyway so the original remains viewable.
-            $this->post->update(['media_status' => MediaStatus::Ready]);
+            $this->postMedia->update(['status' => MediaStatus::Ready]);
         } finally {
             @unlink($tempInput);
             @unlink($tempOutput);
@@ -117,10 +108,10 @@ class TranscodeVideo implements ShouldQueue
 
     public function failed(?\Throwable $exception): void
     {
-        Log::error("TranscodeVideo: job permanently failed for post {$this->post->id}", [
+        Log::error("TranscodeVideo: job permanently failed for post media {$this->postMedia->id}", [
             'message' => $exception?->getMessage(),
         ]);
 
-        $this->post->update(['media_status' => MediaStatus::Ready]);
+        $this->postMedia->update(['status' => MediaStatus::Ready]);
     }
 }

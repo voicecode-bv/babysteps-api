@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\Post;
+use App\Models\PostMedia;
 use App\Support\MediaUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -24,6 +25,26 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'taken_at', type: 'string', format: 'date-time', nullable: true, description: 'Capture time read from EXIF, if present.'),
         new OA\Property(property: 'latitude', type: 'number', format: 'float', nullable: true, description: 'GPS latitude from EXIF, decimal degrees.'),
         new OA\Property(property: 'longitude', type: 'number', format: 'float', nullable: true, description: 'GPS longitude from EXIF, decimal degrees.'),
+        new OA\Property(
+            property: 'media',
+            type: 'array',
+            description: 'All media items attached to this post, ordered by `sort_order`. Always contains at least one item. Top-level `media_url`/`media_type`/etc. mirror the first item for backward compatibility.',
+            items: new OA\Items(
+                properties: [
+                    new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                    new OA\Property(property: 'sort_order', type: 'integer'),
+                    new OA\Property(property: 'url', type: 'string'),
+                    new OA\Property(property: 'original_url', type: 'string', nullable: true, description: 'Only present when `is_downloadable` is true.'),
+                    new OA\Property(property: 'type', type: 'string', enum: ['image', 'video']),
+                    new OA\Property(property: 'status', type: 'string', enum: ['processing', 'ready', 'failed']),
+                    new OA\Property(property: 'thumbnail_url', type: 'string', nullable: true),
+                    new OA\Property(property: 'thumbnail_small_url', type: 'string', nullable: true),
+                    new OA\Property(property: 'taken_at', type: 'string', format: 'date-time', nullable: true),
+                    new OA\Property(property: 'latitude', type: 'number', format: 'float', nullable: true),
+                    new OA\Property(property: 'longitude', type: 'number', format: 'float', nullable: true),
+                ],
+            ),
+        ),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
         new OA\Property(property: 'user', type: 'object', properties: [
@@ -114,6 +135,21 @@ class PostResource extends JsonResource
             'comments_count' => $this->comments_count ?? 0,
             'is_liked' => (bool) ($this->is_liked ?? false),
             'is_downloadable' => $isDownloadable,
+            'media' => $this->whenLoaded('media', fn () => $this->media->map(fn (PostMedia $m) => [
+                'id' => $m->id,
+                'sort_order' => $m->sort_order,
+                'url' => MediaUrl::sign($m->path),
+                'original_url' => $isDownloadable
+                    ? MediaUrl::sign(MediaUrl::originalPath($m->path) ?? $m->path)
+                    : null,
+                'type' => $m->type,
+                'status' => $m->status?->value ?? 'ready',
+                'thumbnail_url' => MediaUrl::sign($m->thumbnail_path),
+                'thumbnail_small_url' => MediaUrl::sign($m->thumbnail_small_path),
+                'taken_at' => $m->taken_at,
+                'latitude' => $m->latitude,
+                'longitude' => $m->longitude,
+            ])),
             'comments' => CommentResource::collection($this->whenLoaded('comments')),
             'persons' => $this->whenLoaded('persons', fn () => $this->persons->map(fn ($person) => [
                 'id' => $person->id,
