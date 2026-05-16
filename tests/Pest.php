@@ -1,5 +1,8 @@
 <?php
 
+use App\Models\Circle;
+use App\Models\Post;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -47,4 +50,18 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Koppelt een nieuwe circle aan een post en zet de opgegeven users als members.
+ * Helpt tests om snel de "viewer en auteur delen een circle"-precondition op te
+ * zetten die de comments-index endpoint vereist voor zichtbaarheid.
+ */
+function shareCircle(Post $post, User ...$users): Circle
+{
+    $circle = Circle::factory()->create();
+    $post->circles()->attach($circle);
+    $circle->members()->attach(collect($users)->pluck('id')->all());
+
+    return $circle;
 }
