@@ -120,6 +120,21 @@ it('returns all shared-circle users (paginated) without a query', function () {
         ->assertJsonStructure(['data', 'links', 'meta' => ['current_page', 'last_page', 'per_page', 'total']]);
 });
 
+it('excludes users who have opted out of being searchable', function () {
+    $auth = User::factory()->create();
+    $hidden = User::factory()->create(['name' => 'Hidden Helena', 'searchable' => false]);
+    $visible = User::factory()->create(['name' => 'Visible Helena']);
+
+    $circle = Circle::factory()->for($auth)->create();
+    $circle->members()->attach([$hidden->id, $visible->id]);
+
+    $this->actingAs($auth)
+        ->getJson('/api/users/search?q=helena')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $visible->id);
+});
+
 it('paginates results when there are more than 30 users in shared circles', function () {
     $auth = User::factory()->create();
     $circle = Circle::factory()->for($auth)->create();

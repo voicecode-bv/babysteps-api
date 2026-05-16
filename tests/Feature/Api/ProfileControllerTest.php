@@ -188,6 +188,37 @@ it('returns null birthdate when no person record exists', function () {
         ->assertJsonPath('data.birthdate', null);
 });
 
+it('exposes the searchable flag on the editable profile', function () {
+    $user = User::factory()->create(['searchable' => false]);
+
+    $this->actingAs($user)
+        ->getJson('/api/profile')
+        ->assertSuccessful()
+        ->assertJsonPath('data.searchable', false);
+});
+
+it('can toggle the searchable flag through profile update', function () {
+    $user = User::factory()->create(['searchable' => true]);
+
+    $this->actingAs($user)
+        ->patchJson('/api/profile', ['searchable' => false])
+        ->assertSuccessful();
+
+    expect($user->fresh()->searchable)->toBeFalse();
+});
+
+it('leaves searchable untouched when the client does not send the field', function () {
+    $user = User::factory()->create(['searchable' => false]);
+
+    $this->actingAs($user)
+        ->patchJson('/api/profile', ['bio' => 'Only updating bio'])
+        ->assertSuccessful();
+
+    expect($user->fresh())
+        ->bio->toBe('Only updating bio')
+        ->searchable->toBeFalse();
+});
+
 it('saves birthdate on profile update by creating a person record when missing', function () {
     $user = User::factory()->create();
 
