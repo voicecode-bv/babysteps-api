@@ -372,6 +372,22 @@ describe('avatar', function () {
         Storage::disk('public')->assertExists($person->avatar_thumbnail);
     });
 
+    it('rejects oversized person avatar dimensions', function () {
+        Storage::fake('public');
+
+        $owner = User::factory()->create();
+        $circle = Circle::factory()->for($owner)->create();
+        $person = Person::factory()->for($owner, 'creator')->create();
+        $person->circles()->attach($circle);
+
+        $this->actingAs($owner)
+            ->postJson('/api/persons/'.$person->id.'/avatar', [
+                'avatar' => UploadedFile::fake()->image('huge.jpg', 5000, 5000),
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('avatar');
+    });
+
     it('forbids uploading an avatar to a person not visible to the user', function () {
         Storage::fake('public');
 

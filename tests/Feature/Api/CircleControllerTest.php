@@ -4,6 +4,8 @@ use App\Enums\InvitationStatus;
 use App\Models\Circle;
 use App\Models\CircleInvitation;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 
 it('returns circles owned by the user with is_owner true', function () {
     $user = User::factory()->create();
@@ -309,4 +311,18 @@ it('ignores non-pending invitations when filtering by not_member_username', func
         ->assertOk();
 
     expect($response->json('data.0.pending_invitations'))->toBeEmpty();
+});
+
+it('rejects oversized circle photo dimensions', function () {
+    Storage::fake('public');
+
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create();
+
+    $this->actingAs($owner)
+        ->postJson("/api/circles/{$circle->id}/photo", [
+            'photo' => UploadedFile::fake()->image('huge.jpg', 5000, 5000),
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('photo');
 });
