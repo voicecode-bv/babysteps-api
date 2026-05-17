@@ -203,6 +203,52 @@ it('dispatches TranscodeVideo for each video item with the PostMedia model', fun
     });
 });
 
+it('applies HEIC orientation correction per item in multi-photo posts', function () {
+    if (! class_exists(\Imagick::class) || ! in_array('HEIC', \Imagick::queryFormats('HEIC'), true)) {
+        $this->markTestSkipped('Imagick build lacks HEIC support');
+    }
+
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create(['user_id' => $user->id]);
+
+    $heicFixture = new UploadedFile(
+        __DIR__.'/../../fixtures/photo-heic-orientation-mismatch.heic',
+        'photo.heic',
+        'image/heic',
+        null,
+        true,
+    );
+
+    $this->actingAs($user)
+        ->postJson('/api/posts', [
+            'media' => [
+                $heicFixture,
+                UploadedFile::fake()->image('plain.jpg'),
+            ],
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertCreated();
+
+    $post = Post::first();
+    $disk = Storage::disk('public');
+
+    // HEIC is item 0 — its display variant must be rotated + EXIF reset.
+    $heicItem = $post->media()->where('sort_order', 0)->first();
+    $heicPath = $disk->path($heicItem->path);
+    [$width] = getimagesize($heicPath);
+
+    // Source HEIC display variant is scaled down to MAX_DISPLAY_WIDTH (1920).
+    expect($width)->toBe(1920);
+
+    $exif = @exif_read_data($heicPath, 'IFD0', true);
+    expect($exif['IFD0']['Orientation'] ?? 1)->toBe(1);
+
+    // Plain JPEG is item 1 — should be stored normally.
+    $jpegItem = $post->media()->where('sort_order', 1)->first();
+    expect($disk->exists($jpegItem->path))->toBeTrue();
+});
+
 it('observer syncs shadow columns when the primary post_media item changes', function () {
     Storage::fake('public');
     $user = User::factory()->create();
