@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\MediaStatus;
+use App\Support\PostViewerVisibility;
 use Database\Factories\PostFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -170,5 +171,43 @@ class Post extends Model
     public function media(): HasMany
     {
         return $this->hasMany(PostMedia::class)->orderBy('sort_order');
+    }
+
+    /**
+     * De meest recente liker die voor deze viewer zichtbaar is — gebruikt
+     * door de "X en N anderen vinden dit leuk" regel onder een post. Geeft
+     * `null` als er geen likes zijn of geen enkele liker zichtbaar is voor
+     * deze viewer.
+     *
+     * Per-model gecached zodat een Resource die de gerelateerde user nogmaals
+     * uitleest geen extra query veroorzaakt.
+     */
+    public function firstVisibleLikerFor(User $viewer): ?User
+    {
+        $cacheKey = "first_visible_liker_for:{$viewer->id}";
+
+        if (array_key_exists($cacheKey, $this->relations)) {
+            $cached = $this->relations[$cacheKey];
+
+            return $cached instanceof User ? $cached : null;
+        }
+
+        if (($this->likes_count ?? 0) === 0) {
+            $this->setRelation($cacheKey, null);
+
+            return null;
+        }
+
+        $visibility = PostViewerVisibility::for($viewer, $this);
+
+        $query = $this->likes()->latest()->with('user:id,name,username,avatar');
+        $visibility->scopeLikesQuery($query);
+
+        $like = $query->first();
+
+        $user = $like?->user;
+        $this->setRelation($cacheKey, $user);
+
+        return $user;
     }
 }

@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Models\Post;
 use App\Notifications\PostLiked;
 use App\Support\MediaUrl;
+use App\Support\PostViewerVisibility;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -13,10 +15,18 @@ use OpenApi\Attributes as OA;
 
 class LikeController extends Controller
 {
+    /**
+     * Onder deze versie verwacht de client gewoon een lijst gebruikers met
+     * `id/name/username/avatar` per like; een placeholder met `is_visible: false`
+     * zou crashen op `like.user.name`. Vanaf 1.1.0 ondersteunt de client
+     * placeholders en filteren we niet meer aan de query-kant.
+     */
+    private const VISIBILITY_V2_MIN_VERSION = '1.1.0';
+
     #[OA\Get(
         path: '/api/posts/{post}/likes',
         summary: 'List likes',
-        description: 'Return a paginated list of users who liked the post, newest first.',
+        description: 'Return a paginated list of users who liked the post, newest first. Likes by users outside the viewer\'s shared circles are returned as `{id, is_visible: false}` placeholders for clients on `X-App-Version` >= 1.1.0, and silently filtered out for older clients.',
         tags: ['Likes'],
         security: [['sanctum' => []]],
         parameters: [
@@ -32,8 +42,9 @@ class LikeController extends Controller
                         new OA\Property(property: 'data', type: 'array', items: new OA\Items(
                             properties: [
                                 new OA\Property(property: 'id', type: 'string', format: 'uuid'),
-                                new OA\Property(property: 'name', type: 'string'),
-                                new OA\Property(property: 'username', type: 'string'),
+                                new OA\Property(property: 'is_visible', type: 'boolean'),
+                                new OA\Property(property: 'name', type: 'string', nullable: true),
+                                new OA\Property(property: 'username', type: 'string', nullable: true),
                                 new OA\Property(property: 'avatar', type: 'string', nullable: true),
                             ],
                         )),
@@ -46,27 +57,79 @@ class LikeController extends Controller
             new OA\Response(response: 404, description: 'Post not found'),
         ],
     )]
-    public function index(Post $post): JsonResponse
+    public function index(Request $request, Post $post): JsonResponse
     {
-        $likes = $post->likes()
+        $viewer = $request->user();
+        $visibility = PostViewerVisibility::for($viewer, $post);
+
+        $clientVersion = (string) $request->header('X-App-Version', '0.0.0');
+        $supportsVisibilityMarkers = version_compare(
+            $clientVersion,
+            self::VISIBILITY_V2_MIN_VERSION,
+            '>='
+        );
+
+        $base = $post->likes()
             ->with('user:id,name,username,avatar')
-            ->latest()
-            ->paginate(50);
+            ->latest();
+
+        // Oude clients (geen header of versie < drempel) krijgen geen
+        // placeholders terug — hun LikeUser interface vereist een user. Privacy
+        // blijft gewaarborgd door op query-niveau te filteren.
+        if (! $supportsVisibilityMarkers) {
+            $visibility->scopeLikesQuery($base);
+
+            $likes = $base->paginate(50);
+
+            return response()->json([
+                'data' => $likes->getCollection()->map(fn ($like) => [
+                    'id' => $like->user->id,
+                    'is_visible' => true,
+                    'name' => $like->user->name,
+                    'username' => $like->user->username,
+                    'avatar' => MediaUrl::sign($like->user->avatar),
+                ])->values(),
+                'meta' => $this->paginationMeta($likes),
+            ]);
+        }
+
+        $likes = $base->paginate(50);
+
+        $likerIds = $likes->getCollection()->pluck('user_id')->unique();
+        $visibleSet = $visibility->visibleSubset($likerIds);
 
         return response()->json([
-            'data' => $likes->getCollection()->map(fn ($like) => [
-                'id' => $like->user->id,
-                'name' => $like->user->name,
-                'username' => $like->user->username,
-                'avatar' => MediaUrl::sign($like->user->avatar),
-            ])->values(),
-            'meta' => [
-                'current_page' => $likes->currentPage(),
-                'last_page' => $likes->lastPage(),
-                'per_page' => $likes->perPage(),
-                'total' => $likes->total(),
-            ],
+            'data' => $likes->getCollection()->map(function ($like) use ($visibleSet) {
+                if (! $visibleSet->has($like->user_id)) {
+                    return [
+                        'id' => $like->user_id,
+                        'is_visible' => false,
+                    ];
+                }
+
+                return [
+                    'id' => $like->user->id,
+                    'is_visible' => true,
+                    'name' => $like->user->name,
+                    'username' => $like->user->username,
+                    'avatar' => MediaUrl::sign($like->user->avatar),
+                ];
+            })->values(),
+            'meta' => $this->paginationMeta($likes),
         ]);
+    }
+
+    /**
+     * @return array{current_page: int, last_page: int, per_page: int, total: int}
+     */
+    private function paginationMeta(LengthAwarePaginator $paginator): array
+    {
+        return [
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'per_page' => $paginator->perPage(),
+            'total' => $paginator->total(),
+        ];
     }
 
     #[OA\Post(

@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use App\Models\Post;
 use App\Models\PostMedia;
+use App\Models\User;
 use App\Support\MediaUrl;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -54,6 +55,18 @@ use OpenApi\Attributes as OA;
             new OA\Property(property: 'avatar', type: 'string', nullable: true),
         ]),
         new OA\Property(property: 'likes_count', type: 'integer'),
+        new OA\Property(
+            property: 'first_visible_liker',
+            type: 'object',
+            nullable: true,
+            description: 'Most recent liker that is visible to the authenticated viewer (member of at least one shared circle). Used for the "X and N others like this" line under the post. Null if there are no likes or no liker is visible to the viewer.',
+            properties: [
+                new OA\Property(property: 'id', type: 'string', format: 'uuid'),
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'username', type: 'string'),
+                new OA\Property(property: 'avatar', type: 'string', nullable: true),
+            ],
+        ),
         new OA\Property(property: 'comments_count', type: 'integer'),
         new OA\Property(property: 'is_liked', type: 'boolean'),
         new OA\Property(property: 'is_downloadable', type: 'boolean', description: 'Whether the authenticated user is allowed to download the post media. True for the post owner, and for viewers when at least one of the post\'s circles has `members_can_download` enabled.'),
@@ -132,6 +145,7 @@ class PostResource extends JsonResource
                 'avatar' => MediaUrl::sign($this->user->avatar),
             ],
             'likes_count' => $this->likes_count ?? 0,
+            'first_visible_liker' => $this->firstVisibleLikerPayload($request->user()),
             'comments_count' => $this->comments_count ?? 0,
             'is_liked' => (bool) ($this->is_liked ?? false),
             'is_downloadable' => $isDownloadable,
@@ -175,5 +189,28 @@ class PostResource extends JsonResource
         }
 
         return $data;
+    }
+
+    /**
+     * @return array{id: string, name: string, username: string, avatar: ?string}|null
+     */
+    private function firstVisibleLikerPayload(?User $viewer): ?array
+    {
+        if (! $viewer) {
+            return null;
+        }
+
+        $liker = $this->resource->firstVisibleLikerFor($viewer);
+
+        if (! $liker) {
+            return null;
+        }
+
+        return [
+            'id' => $liker->id,
+            'name' => $liker->name,
+            'username' => $liker->username,
+            'avatar' => MediaUrl::sign($liker->avatar),
+        ];
     }
 }
