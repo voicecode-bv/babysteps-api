@@ -15,6 +15,7 @@ it('lets the owner create an invite link with defaults', function () {
 
     $response->assertJsonPath('data.uses_count', 0);
     $response->assertJsonPath('data.max_uses', null);
+    $response->assertJsonPath('data.expires_at', null);
     $response->assertJsonPath('data.revoked_at', null);
 
     $url = $response->json('data.url');

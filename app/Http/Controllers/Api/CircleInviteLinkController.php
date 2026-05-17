@@ -59,7 +59,7 @@ class CircleInviteLinkController extends Controller
     #[OA\Post(
         path: '/api/circles/{circle}/invite-links',
         summary: 'Create invite link',
-        description: 'Create a new shareable invite link for a circle. Available to the circle owner, and to members when `members_can_invite` is enabled. Defaults to 7-day expiry and unlimited uses.',
+        description: 'Create a new shareable invite link for a circle. Available to the circle owner, and to members when `members_can_invite` is enabled. Defaults to no expiry and unlimited uses.',
         tags: ['Circle Invite Links'],
         security: [['sanctum' => []]],
         parameters: [
@@ -68,7 +68,7 @@ class CircleInviteLinkController extends Controller
         requestBody: new OA\RequestBody(
             required: false,
             content: new OA\JsonContent(properties: [
-                new OA\Property(property: 'expires_in_days', type: 'integer', nullable: true, description: 'Lifetime in days. Defaults to 7. Pass null for no expiry.', example: 7),
+                new OA\Property(property: 'expires_in_days', type: 'integer', nullable: true, description: 'Lifetime in days. Defaults to null (never expires).', example: null),
                 new OA\Property(property: 'max_uses', type: 'integer', nullable: true, description: 'Maximum number of redemptions. Defaults to null (unlimited).', example: null),
             ]),
         ),
@@ -91,7 +91,7 @@ class CircleInviteLinkController extends Controller
 
         $expiresInDays = $request->exists('expires_in_days')
             ? $request->validated('expires_in_days')
-            : 7;
+            : null;
 
         $link = CircleInviteLink::create([
             'circle_id' => $circle->id,

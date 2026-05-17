@@ -22,7 +22,7 @@ class CircleInviteLinkFactory extends Factory
             'circle_id' => Circle::factory(),
             'created_by_user_id' => User::factory(),
             'token' => Str::random(43),
-            'expires_at' => now()->addDays(7),
+            'expires_at' => null,
             'max_uses' => null,
             'uses_count' => 0,
             'revoked_at' => null,
