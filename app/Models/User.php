@@ -46,6 +46,8 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
         return [
             'email_verified_at' => 'datetime',
             'onboarded_at' => 'datetime',
+            'feature_tour_started_at' => 'datetime',
+            'feature_tour_completed_at' => 'datetime',
             'password' => 'hashed',
             'notification_preferences' => 'array',
             'default_circle_ids' => 'array',
@@ -134,6 +136,14 @@ class User extends Authenticatable implements FilamentUser, HasLocalePreference,
     public function onboardingSteps(): HasMany
     {
         return $this->hasMany(OnboardingStep::class);
+    }
+
+    /**
+     * @return HasMany<FeatureTourStep, $this>
+     */
+    public function featureTourSteps(): HasMany
+    {
+        return $this->hasMany(FeatureTourStep::class);
     }
 
     /**

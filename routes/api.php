@@ -13,6 +13,10 @@ use App\Http\Controllers\Api\CommentLikeController;
 use App\Http\Controllers\Api\DefaultCircleController;
 use App\Http\Controllers\Api\DeviceInfoController;
 use App\Http\Controllers\Api\DeviceTokenController;
+use App\Http\Controllers\Api\FeatureTourCompletedController;
+use App\Http\Controllers\Api\FeatureTourSegmentController;
+use App\Http\Controllers\Api\FeatureTourStartedController;
+use App\Http\Controllers\Api\FeatureTourStatusController;
 use App\Http\Controllers\Api\FeedController;
 use App\Http\Controllers\Api\LikeController;
 use App\Http\Controllers\Api\NotificationController;
@@ -152,6 +156,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('/onboarding/complete', OnboardingController::class)->name('api.onboarding.complete');
     Route::post('/onboarding/steps', OnboardingStepController::class)->name('api.onboarding.steps.store');
+
+    Route::get('/feature-tour/status', FeatureTourStatusController::class)->name('api.feature-tour.status');
+    Route::post('/feature-tour/started', FeatureTourStartedController::class)->name('api.feature-tour.started');
+    Route::post('/feature-tour/segments/{step}/completed', FeatureTourSegmentController::class)->name('api.feature-tour.segments.completed');
+    Route::post('/feature-tour/completed', FeatureTourCompletedController::class)->name('api.feature-tour.completed');
 
     Route::delete('/account', AccountController::class)
         ->middleware('throttle:3,60')
