@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Notification;
@@ -65,6 +66,34 @@ it('resets the password with a valid token', function () {
     expect(Hash::check('new-password-123', $user->fresh()->password))->toBeTrue();
 
     Event::assertDispatched(PasswordReset::class);
+});
+
+it('revokes all api tokens, device tokens and sessions on password reset', function () {
+    $user = User::factory()->create(['email' => 'jane@example.com']);
+    $user->createToken('mobile')->plainTextToken;
+    $user->createToken('web')->plainTextToken;
+    $user->deviceTokens()->create(['token' => 'fcm-token-1', 'last_used_at' => now()]);
+    DB::table('sessions')->insert([
+        'id' => 'session-1',
+        'user_id' => $user->id,
+        'ip_address' => '127.0.0.1',
+        'user_agent' => 'phpunit',
+        'payload' => '',
+        'last_activity' => now()->timestamp,
+    ]);
+
+    $token = app('auth.password.broker')->createToken($user);
+
+    $this->postJson('/api/auth/reset-password', [
+        'token' => $token,
+        'email' => 'jane@example.com',
+        'password' => 'new-password-123',
+        'password_confirmation' => 'new-password-123',
+    ])->assertOk();
+
+    expect($user->tokens()->count())->toBe(0);
+    expect($user->deviceTokens()->count())->toBe(0);
+    expect(DB::table('sessions')->where('user_id', $user->id)->count())->toBe(0);
 });
 
 it('rejects an invalid reset token', function () {

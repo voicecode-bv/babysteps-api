@@ -22,11 +22,11 @@ class UpdatePostRequest extends FormRequest
     {
         return [
             'caption' => ['sometimes', 'nullable', 'string', 'max:2200'],
-            'circle_ids' => ['sometimes', 'array', 'min:1'],
+            'circle_ids' => ['sometimes', 'array', 'min:1', 'max:50'],
             'circle_ids.*' => ['uuid', new AccessibleCircle($this->user())],
-            'tag_ids' => ['sometimes', 'array'],
+            'tag_ids' => ['sometimes', 'array', 'max:50'],
             'tag_ids.*' => ['uuid', new OwnedTag($this->user())],
-            'person_ids' => ['sometimes', 'array'],
+            'person_ids' => ['sometimes', 'array', 'max:50'],
             'person_ids.*' => ['uuid', new TaggablePerson($this->user(), $this->effectiveCircleIds())],
         ];
     }

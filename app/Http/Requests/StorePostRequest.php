@@ -69,11 +69,11 @@ class StorePostRequest extends FormRequest
             'taken_at' => ['nullable', 'date', 'before_or_equal:now', 'after:1990-01-01'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],
-            'circle_ids' => ['required', 'array', 'min:1'],
+            'circle_ids' => ['required', 'array', 'min:1', 'max:50'],
             'circle_ids.*' => ['uuid', new AccessibleCircle($this->user())],
-            'tag_ids' => ['sometimes', 'array'],
+            'tag_ids' => ['sometimes', 'array', 'max:50'],
             'tag_ids.*' => ['uuid', new OwnedTag($this->user())],
-            'person_ids' => ['sometimes', 'array'],
+            'person_ids' => ['sometimes', 'array', 'max:50'],
             'person_ids.*' => ['uuid', new TaggablePerson($this->user(), $this->effectiveCircleIds())],
         ];
     }
@@ -93,11 +93,11 @@ class StorePostRequest extends FormRequest
             'media_metadata.*.longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'caption' => ['nullable', 'string', 'max:2200'],
             'location' => ['nullable', 'string', 'max:255'],
-            'circle_ids' => ['required', 'array', 'min:1'],
+            'circle_ids' => ['required', 'array', 'min:1', 'max:50'],
             'circle_ids.*' => ['uuid', new AccessibleCircle($this->user())],
-            'tag_ids' => ['sometimes', 'array'],
+            'tag_ids' => ['sometimes', 'array', 'max:50'],
             'tag_ids.*' => ['uuid', new OwnedTag($this->user())],
-            'person_ids' => ['sometimes', 'array'],
+            'person_ids' => ['sometimes', 'array', 'max:50'],
             'person_ids.*' => ['uuid', new TaggablePerson($this->user(), $this->effectiveCircleIds())],
         ];
     }

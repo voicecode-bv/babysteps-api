@@ -76,6 +76,22 @@ it('auto-links google_id onto an existing password user with the same email', fu
     expect(User::count())->toBe(1);
 });
 
+it('refuses to auto-link onto an existing account that has not verified its email', function () {
+    User::factory()->unverified()->create([
+        'email' => 'squat@example.com',
+        'google_id' => null,
+    ]);
+
+    mockSocialiteDriver('google', mockSocialiteUser('g-squat', 'squat@example.com', 'Real Owner'));
+
+    $response = $this->get('/api/oauth/google/callback?code=test');
+
+    $response->assertRedirect();
+    expect($response->headers->get('Location'))
+        ->toBe('innerrapp://oauth/callback?error=unverified_account_exists');
+    expect(User::where('email', 'squat@example.com')->value('google_id'))->toBeNull();
+});
+
 it('generates a unique username when the email local-part collides', function () {
     User::factory()->create(['username' => 'collision']);
 

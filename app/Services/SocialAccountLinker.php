@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\UnverifiedAccountLinkException;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
@@ -28,6 +29,15 @@ class SocialAccountLinker
             $existingByEmail = User::query()->where('email', $email)->first();
 
             if ($existingByEmail !== null) {
+                // Een squatter kan een account met een willekeurig e-mailadres
+                // aanmaken zonder het te verifiëren; dat onverifieerde account
+                // automatisch koppelen aan OAuth-login = account-takeover. Eis
+                // dat het bestaande account zijn e-mail heeft bewezen vóór we
+                // het OAuth-provider-ID erop pinnen.
+                if ($existingByEmail->email_verified_at === null) {
+                    throw new UnverifiedAccountLinkException;
+                }
+
                 $existingByEmail->forceFill([$providerColumn => $providerId])->save();
 
                 return $existingByEmail;

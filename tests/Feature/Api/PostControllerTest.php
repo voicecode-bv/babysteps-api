@@ -286,6 +286,9 @@ it('validates store post fields', function (array $data, string $errorField) {
     'location too long' => [['media' => UploadedFile::fake()->image('photo.jpg'), 'location' => str_repeat('a', 256)], 'location'],
     'missing circle_ids' => [['media' => UploadedFile::fake()->image('photo.jpg')], 'circle_ids'],
     'empty circle_ids' => [['media' => UploadedFile::fake()->image('photo.jpg'), 'circle_ids' => []], 'circle_ids'],
+    'too many circle_ids' => [['media' => UploadedFile::fake()->image('photo.jpg'), 'circle_ids' => array_fill(0, 51, '00000000-0000-0000-0000-000000000000')], 'circle_ids'],
+    'too many tag_ids' => [['media' => UploadedFile::fake()->image('photo.jpg'), 'circle_ids' => ['00000000-0000-0000-0000-000000000001'], 'tag_ids' => array_fill(0, 51, '00000000-0000-0000-0000-000000000000')], 'tag_ids'],
+    'too many person_ids' => [['media' => UploadedFile::fake()->image('photo.jpg'), 'circle_ids' => ['00000000-0000-0000-0000-000000000001'], 'person_ids' => array_fill(0, 51, '00000000-0000-0000-0000-000000000000')], 'person_ids'],
 ]);
 
 it('requires authentication to store a post', function () {

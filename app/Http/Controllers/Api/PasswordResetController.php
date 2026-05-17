@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -82,6 +83,14 @@ class PasswordResetController extends Controller
                     'password' => $password,
                     'remember_token' => Str::random(60),
                 ])->save();
+
+                // Een wachtwoordreset is vaak een respons op een vermoedelijke
+                // compromittering. Trek alle bestaande sessies, API-tokens en
+                // push-bestemmingen in zodat een gestolen token niet langer
+                // werkt — anders blijft de aanvaller ingelogd ondanks de reset.
+                $user->tokens()->delete();
+                $user->deviceTokens()->delete();
+                DB::table('sessions')->where('user_id', $user->id)->delete();
 
                 event(new PasswordReset($user));
             },

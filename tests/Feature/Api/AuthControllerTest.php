@@ -1,8 +1,10 @@
 <?php
 
 use App\Enums\InvitationStatus;
+use App\Http\Resources\UserResource;
 use App\Models\CircleInvitation;
 use App\Models\User;
+use Illuminate\Http\Request;
 
 it('can register a new user', function () {
     $response = $this->postJson('/api/auth/register', [
@@ -175,6 +177,30 @@ it('can get the authenticated user', function () {
 it('returns unauthenticated for me endpoint without token', function () {
     $this->getJson('/api/auth/me')
         ->assertUnauthorized();
+});
+
+it('returns the email on /me for the authenticated user', function () {
+    $user = User::factory()->create(['email' => 'me@example.com']);
+
+    $this->actingAs($user)
+        ->getJson('/api/auth/me')
+        ->assertOk()
+        ->assertJsonPath('user.email', 'me@example.com');
+});
+
+it('strips email from UserResource when serializing a non-self user', function () {
+    $self = User::factory()->create(['email' => 'self@example.com']);
+    $other = User::factory()->create(['email' => 'other@example.com']);
+
+    $request = Request::create('/');
+    $request->setUserResolver(fn () => $self);
+
+    $payload = (new UserResource($other))->toArray($request);
+
+    expect($payload['email'])->toBeNull();
+    expect($payload['email_verified_at'])->toBeNull();
+    expect($payload['onboarded_at'])->toBeNull();
+    expect($payload['id'])->toBe($other->id);
 });
 
 it('can logout', function () {

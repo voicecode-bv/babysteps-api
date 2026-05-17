@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\UnverifiedAccountLinkException;
 use App\Http\Controllers\Controller;
 use App\Services\SocialAccountLinker;
 use Illuminate\Http\RedirectResponse;
@@ -40,7 +41,11 @@ class OAuthController extends Controller
             return $this->redirectToApp(['error' => 'missing_email']);
         }
 
-        $user = $this->linker->findOrCreate($provider, $oauthUser);
+        try {
+            $user = $this->linker->findOrCreate($provider, $oauthUser);
+        } catch (UnverifiedAccountLinkException) {
+            return $this->redirectToApp(['error' => 'unverified_account_exists']);
+        }
 
         $token = $user->createToken('innerr-mobile')->plainTextToken;
 

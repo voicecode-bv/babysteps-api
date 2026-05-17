@@ -32,16 +32,22 @@ class UserResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        // E-mail en e-mailverificatiestatus zijn PII die alleen het account
+        // zelf hoort te zien. Deze resource wordt overal hergebruikt (op
+        // comment.user, like.user, post.user) — zonder deze scoping lekken
+        // we elk e-mailadres aan elke geauthenticeerde caller.
+        $isSelf = $request->user()?->id === $this->id;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
             'username' => $this->username,
-            'email' => $this->email,
+            'email' => $isSelf ? $this->email : null,
             'avatar' => MediaUrl::sign($this->avatar),
             'bio' => $this->bio,
             'locale' => $this->locale,
-            'email_verified_at' => $this->email_verified_at,
-            'onboarded_at' => $this->onboarded_at,
+            'email_verified_at' => $isSelf ? $this->email_verified_at : null,
+            'onboarded_at' => $isSelf ? $this->onboarded_at : null,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
