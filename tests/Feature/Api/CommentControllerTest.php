@@ -296,13 +296,13 @@ it('treats clients with X-App-Version below the v2 threshold as old clients', fu
         ->assertJsonCount(1, 'data');
 });
 
-it('always shows the viewer\'s own comments even without a shared circle', function () {
+it('blocks comment listing when viewer has no shared circle with the post', function () {
     $viewer = User::factory()->create();
     $post = Post::factory()->create();
     // Post zit alleen in een circle waar de viewer niet in zit.
     shareCircle($post, User::factory()->create());
 
-    $own = Comment::factory()->create([
+    Comment::factory()->create([
         'post_id' => $post->id,
         'user_id' => $viewer->id,
         'body' => 'My own thought',
@@ -310,10 +310,7 @@ it('always shows the viewer\'s own comments even without a shared circle', funct
 
     $this->actingAs($viewer)
         ->getJson("/api/posts/{$post->id}/comments")
-        ->assertOk()
-        ->assertJsonPath('data.0.id', $own->id)
-        ->assertJsonPath('data.0.is_visible', true)
-        ->assertJsonPath('data.0.body', 'My own thought');
+        ->assertForbidden();
 });
 
 it('shows all comments when the post is in a single shared circle', function () {
@@ -359,6 +356,7 @@ it('shows a comment when the author shares at least one of multiple post circles
 it('can store a comment on a post', function () {
     $user = User::factory()->create();
     $post = Post::factory()->create();
+    shareCircle($post, $user);
 
     $this->actingAs($user)
         ->postJson("/api/posts/{$post->id}/comments", [
@@ -410,6 +408,7 @@ it('requires authentication to store a comment', function () {
 it('throttles comment creation', function () {
     $user = User::factory()->create();
     $post = Post::factory()->create();
+    shareCircle($post, $user);
 
     $this->actingAs($user);
 
@@ -472,6 +471,7 @@ it('notifies the post owner when a comment is added', function () {
     $postOwner = User::factory()->create();
     $post = Post::factory()->create(['user_id' => $postOwner->id]);
     $commenter = User::factory()->create();
+    shareCircle($post, $commenter);
 
     $this->actingAs($commenter)
         ->postJson("/api/posts/{$post->id}/comments", ['body' => 'Hi!'])

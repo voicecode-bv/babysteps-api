@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AccountStorageController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CircleController;
 use App\Http\Controllers\Api\CircleInvitationController;
+use App\Http\Controllers\Api\CircleInviteLinkController;
 use App\Http\Controllers\Api\CircleMemberController;
 use App\Http\Controllers\Api\CircleOwnershipTransferController;
 use App\Http\Controllers\Api\CommentController;
@@ -74,6 +75,10 @@ Route::get('/waiting-list', [WaitingListEntryController::class, 'count'])->name(
 
 Route::get('/subscription/plans', [PlansController::class, 'index'])->name('api.subscription.plans.index');
 
+Route::get('/invite-links/{token}', [CircleInviteLinkController::class, 'show'])
+    ->middleware('throttle:60,1')
+    ->name('api.invite-links.show');
+
 Route::prefix('webhooks/subscriptions')->middleware('throttle:120,1')->group(function () {
     Route::post('apple', AppleWebhookController::class)->name('api.webhooks.subscriptions.apple');
     Route::post('google', GoogleWebhookController::class)->name('api.webhooks.subscriptions.google');
@@ -135,6 +140,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/circle-invitations', [CircleInvitationController::class, 'index'])->name('api.circle-invitations.index');
     Route::post('/circle-invitations/{circleInvitation}/accept', [CircleInvitationController::class, 'accept'])->name('api.circle-invitations.accept');
     Route::post('/circle-invitations/{circleInvitation}/decline', [CircleInvitationController::class, 'decline'])->name('api.circle-invitations.decline');
+
+    Route::get('/circles/{circle}/invite-links', [CircleInviteLinkController::class, 'index'])->name('api.circle-invite-links.index');
+    Route::post('/circles/{circle}/invite-links', [CircleInviteLinkController::class, 'store'])
+        ->middleware('throttle:30,1')
+        ->name('api.circle-invite-links.store');
+    Route::delete('/circles/{circle}/invite-links/{circleInviteLink}', [CircleInviteLinkController::class, 'destroy'])->name('api.circle-invite-links.destroy');
+    Route::post('/invite-links/{token}/accept', [CircleInviteLinkController::class, 'accept'])
+        ->middleware('throttle:30,1')
+        ->name('api.invite-links.accept');
 
     Route::post('/circles/{circle}/ownership-transfer', [CircleOwnershipTransferController::class, 'store'])->name('api.circle-ownership-transfers.store');
     Route::delete('/circles/{circle}/ownership-transfer/{circleOwnershipTransfer}', [CircleOwnershipTransferController::class, 'destroy'])->name('api.circle-ownership-transfers.destroy');

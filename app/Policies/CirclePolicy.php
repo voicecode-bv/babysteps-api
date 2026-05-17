@@ -43,4 +43,9 @@ class CirclePolicy
 
         return $circle->members()->whereKey($user->id)->exists();
     }
+
+    public function manageInviteLinks(User $user, Circle $circle): bool
+    {
+        return $this->invite($user, $circle);
+    }
 }

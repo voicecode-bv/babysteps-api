@@ -46,6 +46,36 @@ class Post extends Model
     }
 
     /**
+     * Verwijder database-notificaties die naar deze post verwijzen voor
+     * gebruikers die geen view-toegang meer hebben (geen owner, geen owner
+     * of member van een van de huidige circles van de post). Aangeroepen
+     * nadat de owner de set circles van een post wijzigt; voorkomt dat een
+     * notificatie-deeplink toegang blijft geven aan iemand die net is
+     * uitgesloten.
+     *
+     * Set-based delete in één query — geen materialisatie van viewer-IDs.
+     */
+    public function pruneNotificationsForLostAccess(): int
+    {
+        $circleIds = $this->circles()->pluck('circles.id');
+
+        return DB::table('notifications')
+            ->whereRaw("data::jsonb->>'post_id' = ?", [(string) $this->id])
+            ->where('notifiable_id', '!=', $this->user_id)
+            ->whereNotIn('notifiable_id', function ($q) use ($circleIds) {
+                $q->select('user_id')
+                    ->from('circle_user')
+                    ->whereIn('circle_id', $circleIds);
+            })
+            ->whereNotIn('notifiable_id', function ($q) use ($circleIds) {
+                $q->select('user_id')
+                    ->from('circles')
+                    ->whereIn('id', $circleIds);
+            })
+            ->delete();
+    }
+
+    /**
      * Sync the tags attached to this post and keep each tag's denormalized
      * `usage_count` in step with the changes.
      *

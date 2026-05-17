@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Comment;
 use App\Notifications\CommentLiked;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -12,6 +13,8 @@ use OpenApi\Attributes as OA;
 
 class CommentLikeController extends Controller
 {
+    use AuthorizesRequests;
+
     #[OA\Post(
         path: '/api/comments/{comment}/like',
         summary: 'Like comment',
@@ -39,6 +42,8 @@ class CommentLikeController extends Controller
     )]
     public function store(Request $request, Comment $comment): JsonResponse
     {
+        $this->authorize('view', $comment->post);
+
         abort_if($request->user()->id === $comment->user_id, 403, 'Cannot like your own comment.');
 
         $like = $comment->likes()->firstOrCreate([
@@ -83,6 +88,8 @@ class CommentLikeController extends Controller
     )]
     public function destroy(Request $request, Comment $comment): JsonResponse
     {
+        $this->authorize('view', $comment->post);
+
         $like = $comment->likes()
             ->where('user_id', $request->user()->id)
             ->first();

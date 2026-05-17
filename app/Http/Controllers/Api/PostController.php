@@ -55,6 +55,8 @@ class PostController extends Controller
     )]
     public function show(Request $request, Post $post): PostResource
     {
+        $this->authorize('view', $post);
+
         $relations = [
             'user:id,name,username,avatar',
             'media',
@@ -343,6 +345,7 @@ class PostController extends Controller
 
         if ($request->has('circle_ids')) {
             $post->circles()->sync($request->validated('circle_ids'));
+            $post->pruneNotificationsForLostAccess();
         }
 
         if ($request->has('tag_ids')) {

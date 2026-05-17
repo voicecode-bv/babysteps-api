@@ -8,17 +8,20 @@ use App\Models\Post;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use MatanYadaev\EloquentSpatial\Enums\Srid;
 use MatanYadaev\EloquentSpatial\Objects\Point;
 
 it('can show a post with relations', function () {
+    $viewer = User::factory()->create();
     $post = Post::factory()->create();
+    shareCircle($post, $viewer);
     Comment::factory()->count(2)->create(['post_id' => $post->id]);
     Like::factory()->count(3)->for($post, 'likeable')->create();
 
-    $this->actingAs(User::factory()->create())
+    $this->actingAs($viewer)
         ->getJson("/api/posts/{$post->id}")
         ->assertSuccessful()
         ->assertJsonPath('data.id', $post->id)
@@ -36,6 +39,7 @@ it('can show a post with relations', function () {
 it('includes is_liked on comments', function () {
     $user = User::factory()->create();
     $post = Post::factory()->create();
+    shareCircle($post, $user);
     $comment = Comment::factory()->create(['post_id' => $post->id]);
     $unlikedComment = Comment::factory()->create(['post_id' => $post->id]);
     Like::factory()->for($comment, 'likeable')->create(['user_id' => $user->id]);
@@ -57,6 +61,7 @@ it('includes is_liked on comments', function () {
 it('returns comments ordered oldest to newest', function () {
     $user = User::factory()->create();
     $post = Post::factory()->create();
+    shareCircle($post, $user);
 
     $oldest = Comment::factory()->create(['post_id' => $post->id, 'created_at' => now()->subHours(3)]);
     $middle = Comment::factory()->create(['post_id' => $post->id, 'created_at' => now()->subHours(2)]);
@@ -873,7 +878,10 @@ it('includes tags only for the post owner on show', function () {
 
     expect($tags[$tag->id])->toMatchArray(['id' => $tag->id, 'name' => 'travel']);
 
-    $this->actingAs(User::factory()->create())
+    $otherViewer = User::factory()->create();
+    shareCircle($post, $otherViewer);
+
+    $this->actingAs($otherViewer)
         ->getJson("/api/posts/{$post->id}")
         ->assertOk()
         ->assertJsonMissingPath('data.tags');
@@ -935,4 +943,141 @@ it('exposes auto_add_new_users on the circle resource', function () {
         ->getJson("/api/circles/{$circle->id}")
         ->assertOk()
         ->assertJsonPath('data.auto_add_new_users', true);
+});
+
+it('returns 403 on show when viewer has no shared circle with the post', function () {
+    $viewer = User::factory()->create();
+    $post = Post::factory()->create();
+    // Post zit in een circle waar de viewer geen owner/member van is.
+    shareCircle($post, User::factory()->create());
+
+    $this->actingAs($viewer)
+        ->getJson("/api/posts/{$post->id}")
+        ->assertForbidden();
+});
+
+it('allows a circle owner to view a post in their circle', function () {
+    $circleOwner = User::factory()->create();
+    $postOwner = User::factory()->create();
+    $post = Post::factory()->for($postOwner)->create();
+    $circle = Circle::factory()->for($circleOwner)->create();
+    $post->circles()->attach($circle);
+
+    $this->actingAs($circleOwner)
+        ->getJson("/api/posts/{$post->id}")
+        ->assertOk();
+});
+
+it('returns 403 on liking a post the viewer cannot see', function () {
+    $liker = User::factory()->create();
+    $post = Post::factory()->create();
+    shareCircle($post, User::factory()->create());
+
+    $this->actingAs($liker)
+        ->postJson("/api/posts/{$post->id}/like")
+        ->assertForbidden();
+});
+
+it('deletes notifications referencing the post for users removed from circles on update', function () {
+    $owner = User::factory()->create();
+    $stayingMember = User::factory()->create();
+    $removedMember = User::factory()->create();
+
+    $keptCircle = Circle::factory()->for($owner)->create();
+    $keptCircle->members()->attach($stayingMember);
+
+    $removedCircle = Circle::factory()->for($owner)->create();
+    $removedCircle->members()->attach($removedMember);
+
+    $post = Post::factory()->for($owner)->create();
+    $post->circles()->attach([$keptCircle->id, $removedCircle->id]);
+
+    foreach ([$stayingMember, $removedMember] as $user) {
+        DB::table('notifications')->insert([
+            'id' => (string) Str::uuid(),
+            'type' => 'new-circle-post',
+            'notifiable_type' => User::class,
+            'notifiable_id' => $user->id,
+            'data' => json_encode(['post_id' => $post->id]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+    }
+
+    $this->actingAs($owner)
+        ->putJson("/api/posts/{$post->id}", [
+            'circle_ids' => [$keptCircle->id],
+        ])
+        ->assertOk();
+
+    expect(DB::table('notifications')
+        ->where('notifiable_id', $stayingMember->id)
+        ->whereRaw("data::jsonb->>'post_id' = ?", [(string) $post->id])
+        ->count())->toBe(1);
+
+    expect(DB::table('notifications')
+        ->where('notifiable_id', $removedMember->id)
+        ->whereRaw("data::jsonb->>'post_id' = ?", [(string) $post->id])
+        ->count())->toBe(0);
+});
+
+it('never deletes the post owner notifications when circles change', function () {
+    $owner = User::factory()->create();
+    $circleA = Circle::factory()->for($owner)->create();
+    $circleB = Circle::factory()->for($owner)->create();
+    $post = Post::factory()->for($owner)->create();
+    $post->circles()->attach([$circleA->id, $circleB->id]);
+
+    DB::table('notifications')->insert([
+        'id' => (string) Str::uuid(),
+        'type' => 'post-commented',
+        'notifiable_type' => User::class,
+        'notifiable_id' => $owner->id,
+        'data' => json_encode(['post_id' => $post->id]),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->actingAs($owner)
+        ->putJson("/api/posts/{$post->id}", [
+            'circle_ids' => [$circleA->id],
+        ])
+        ->assertOk();
+
+    expect(DB::table('notifications')
+        ->where('notifiable_id', $owner->id)
+        ->count())->toBe(1);
+});
+
+it('keeps notifications for users still in any remaining circle of the post', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+
+    $circleA = Circle::factory()->for($owner)->create();
+    $circleA->members()->attach($member);
+    $circleB = Circle::factory()->for($owner)->create();
+    $circleB->members()->attach($member);
+
+    $post = Post::factory()->for($owner)->create();
+    $post->circles()->attach([$circleA->id, $circleB->id]);
+
+    DB::table('notifications')->insert([
+        'id' => (string) Str::uuid(),
+        'type' => 'new-circle-post',
+        'notifiable_type' => User::class,
+        'notifiable_id' => $member->id,
+        'data' => json_encode(['post_id' => $post->id]),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->actingAs($owner)
+        ->putJson("/api/posts/{$post->id}", [
+            'circle_ids' => [$circleA->id],
+        ])
+        ->assertOk();
+
+    expect(DB::table('notifications')
+        ->where('notifiable_id', $member->id)
+        ->count())->toBe(1);
 });

@@ -8,6 +8,7 @@ it('creates a notification when a post is liked', function () {
     $postOwner = User::factory()->create();
     $liker = User::factory()->create();
     $post = Post::factory()->create(['user_id' => $postOwner->id]);
+    shareCircle($post, $liker);
 
     $this->actingAs($liker)
         ->postJson("/api/posts/{$post->id}/like")
@@ -22,6 +23,7 @@ it('does not create duplicate notifications when liking a post twice', function 
     $postOwner = User::factory()->create();
     $liker = User::factory()->create();
     $post = Post::factory()->create(['user_id' => $postOwner->id]);
+    shareCircle($post, $liker);
 
     $this->actingAs($liker)->postJson("/api/posts/{$post->id}/like");
     $this->actingAs($liker)->postJson("/api/posts/{$post->id}/like");
@@ -33,6 +35,7 @@ it('creates a notification when a comment is added to a post', function () {
     $postOwner = User::factory()->create();
     $commenter = User::factory()->create();
     $post = Post::factory()->create(['user_id' => $postOwner->id]);
+    shareCircle($post, $commenter);
 
     $this->actingAs($commenter)
         ->postJson("/api/posts/{$post->id}/comments", ['body' => 'Nice photo!'])
@@ -58,6 +61,7 @@ it('creates a notification when a comment is liked', function () {
     $commentOwner = User::factory()->create();
     $liker = User::factory()->create();
     $post = Post::factory()->create();
+    shareCircle($post, $liker);
     $comment = Comment::factory()->create(['user_id' => $commentOwner->id, 'post_id' => $post->id]);
 
     $this->actingAs($liker)
@@ -75,6 +79,7 @@ it('returns paginated notifications for the authenticated user', function () {
 
     // Create notifications by liking the post from different users
     User::factory(3)->create()->each(function (User $liker) use ($post) {
+        shareCircle($post, $liker);
         $this->actingAs($liker)->postJson("/api/posts/{$post->id}/like");
     });
 
@@ -94,6 +99,7 @@ it('can mark all notifications as read', function () {
     $post = Post::factory()->create(['user_id' => $user->id]);
 
     User::factory(2)->create()->each(function (User $liker) use ($post) {
+        shareCircle($post, $liker);
         $this->actingAs($liker)->postJson("/api/posts/{$post->id}/like");
     });
 
@@ -109,6 +115,7 @@ it('can mark specific notifications as read', function () {
     $post = Post::factory()->create(['user_id' => $user->id]);
 
     User::factory(3)->create()->each(function (User $liker) use ($post) {
+        shareCircle($post, $liker);
         $this->actingAs($liker)->postJson("/api/posts/{$post->id}/like");
     });
 
@@ -132,6 +139,7 @@ it('includes signed small-thumbnail URLs for avatar and post media', function ()
         'user_id' => $postOwner->id,
         'thumbnail_small_url' => 'users/2/posts/thumbnails/post-sm.jpg',
     ]);
+    shareCircle($post, $liker);
 
     $this->actingAs($liker)->postJson("/api/posts/{$post->id}/like");
 

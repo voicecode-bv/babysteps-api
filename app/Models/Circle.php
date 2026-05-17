@@ -63,6 +63,14 @@ class Circle extends Model
     }
 
     /**
+     * @return HasMany<CircleInviteLink, $this>
+     */
+    public function inviteLinks(): HasMany
+    {
+        return $this->hasMany(CircleInviteLink::class);
+    }
+
+    /**
      * @return BelongsToMany<Post, $this>
      */
     public function posts(): BelongsToMany

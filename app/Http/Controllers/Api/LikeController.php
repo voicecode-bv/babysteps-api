@@ -8,6 +8,7 @@ use App\Notifications\PostLiked;
 use App\Support\MediaUrl;
 use App\Support\PostViewerVisibility;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -15,6 +16,8 @@ use OpenApi\Attributes as OA;
 
 class LikeController extends Controller
 {
+    use AuthorizesRequests;
+
     /**
      * Onder deze versie verwacht de client gewoon een lijst gebruikers met
      * `id/name/username/avatar` per like; een placeholder met `is_visible: false`
@@ -59,6 +62,8 @@ class LikeController extends Controller
     )]
     public function index(Request $request, Post $post): JsonResponse
     {
+        $this->authorize('view', $post);
+
         $viewer = $request->user();
         $visibility = PostViewerVisibility::for($viewer, $post);
 
@@ -159,6 +164,8 @@ class LikeController extends Controller
     )]
     public function store(Request $request, Post $post): JsonResponse
     {
+        $this->authorize('view', $post);
+
         abort_if($request->user()->id === $post->user_id, 403, 'Cannot like your own post.');
 
         $like = $post->likes()->firstOrCreate([
@@ -203,6 +210,8 @@ class LikeController extends Controller
     )]
     public function destroy(Request $request, Post $post): JsonResponse
     {
+        $this->authorize('view', $post);
+
         $like = $post->likes()
             ->where('user_id', $request->user()->id)
             ->first();

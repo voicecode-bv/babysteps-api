@@ -160,8 +160,10 @@ it('cannot like own post', function () {
 
 it('can like another users post', function () {
     $post = Post::factory()->create();
+    $liker = User::factory()->create();
+    shareCircle($post, $liker);
 
-    $this->actingAs(User::factory()->create())
+    $this->actingAs($liker)
         ->postJson("/api/posts/{$post->id}/like")
         ->assertCreated()
         ->assertJsonPath('liked', true)
@@ -178,6 +180,7 @@ it('sends a push notification when the post owner has a device token', function 
     $owner->deviceTokens()->create(['token' => 'test-token', 'last_used_at' => now()]);
     $post = Post::factory()->create(['user_id' => $owner->id]);
     $liker = User::factory()->create();
+    shareCircle($post, $liker);
 
     $this->actingAs($liker)
         ->postJson("/api/posts/{$post->id}/like")
@@ -195,8 +198,10 @@ it('does not include the fcm channel when the post owner has no device tokens', 
 
     $owner = User::factory()->create();
     $post = Post::factory()->create(['user_id' => $owner->id]);
+    $liker = User::factory()->create();
+    shareCircle($post, $liker);
 
-    $this->actingAs(User::factory()->create())
+    $this->actingAs($liker)
         ->postJson("/api/posts/{$post->id}/like")
         ->assertCreated();
 

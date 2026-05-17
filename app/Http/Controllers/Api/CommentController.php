@@ -56,6 +56,8 @@ class CommentController extends Controller
     )]
     public function index(Request $request, Post $post): AnonymousResourceCollection
     {
+        $this->authorize('view', $post);
+
         $userId = $request->user()->id;
 
         // Circles waar zowel de viewer als de post lid van zijn — de set
@@ -179,6 +181,8 @@ class CommentController extends Controller
     )]
     public function store(StoreCommentRequest $request, Post $post): JsonResponse
     {
+        $this->authorize('view', $post);
+
         $comment = $post->comments()->create([
             'user_id' => $request->user()->id,
             'body' => $request->validated('body'),

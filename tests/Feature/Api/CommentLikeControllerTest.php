@@ -7,6 +7,7 @@ use App\Models\User;
 it('can like a comment', function () {
     $user = User::factory()->create();
     $comment = Comment::factory()->create();
+    shareCircle($comment->post, $user);
 
     $this->actingAs($user)
         ->postJson("/api/comments/{$comment->id}/like")
@@ -24,6 +25,7 @@ it('can like a comment', function () {
 it('liking a comment is idempotent', function () {
     $user = User::factory()->create();
     $comment = Comment::factory()->create();
+    shareCircle($comment->post, $user);
 
     Like::factory()->for($comment, 'likeable')->create(['user_id' => $user->id]);
 
@@ -36,6 +38,7 @@ it('liking a comment is idempotent', function () {
 it('can unlike a comment', function () {
     $user = User::factory()->create();
     $comment = Comment::factory()->create();
+    shareCircle($comment->post, $user);
 
     Like::factory()->for($comment, 'likeable')->create(['user_id' => $user->id]);
 
@@ -55,6 +58,7 @@ it('can unlike a comment', function () {
 it('unliking a comment that is not liked returns zero', function () {
     $user = User::factory()->create();
     $comment = Comment::factory()->create();
+    shareCircle($comment->post, $user);
 
     $this->actingAs($user)
         ->deleteJson("/api/comments/{$comment->id}/like")
