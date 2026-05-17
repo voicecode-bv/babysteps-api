@@ -30,6 +30,7 @@ class UpdateProfileRequest extends FormRequest
             'name' => ['sometimes', 'string', 'max:255'],
             'username' => ['sometimes', 'string', 'min:1', 'max:255', 'regex:/^[a-z0-9-]+$/', Rule::unique('users')->ignore($this->user())],
             'bio' => ['sometimes', 'nullable', 'string', 'max:1000'],
+            'searchable' => ['sometimes', 'boolean'],
             'locale' => ['sometimes', 'string', 'max:5'],
             'birthdate' => ['sometimes', 'nullable', 'date'],
         ];

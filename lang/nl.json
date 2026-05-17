@@ -8,6 +8,7 @@
     ":inviter invited :invitee": ":inviter heeft :invitee uitgenodigd",
     ":name invited you": ":name heeft je uitgenodigd",
     ":name has invited you": ":name heeft je uitgenodigd",
+    "tagged you in a post": "heeft je getagd in een bericht",
     "Hello!": "Hallo!",
     "Hello :name!": "Hallo :name!",
     ":name has invited you to join their circles.": ":name heeft je uitgenodigd om lid te worden van hun kringen.",

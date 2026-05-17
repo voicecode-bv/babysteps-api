@@ -13,17 +13,18 @@ use OpenApi\Attributes as OA;
     schema: 'Comment',
     properties: [
         new OA\Property(property: 'id', type: 'string', format: 'uuid'),
-        new OA\Property(property: 'body', type: 'string'),
+        new OA\Property(property: 'is_visible', type: 'boolean'),
+        new OA\Property(property: 'body', type: 'string', nullable: true),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
-        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
-        new OA\Property(property: 'user', type: 'object', properties: [
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'user', type: 'object', nullable: true, properties: [
             new OA\Property(property: 'id', type: 'string', format: 'uuid'),
             new OA\Property(property: 'name', type: 'string'),
             new OA\Property(property: 'username', type: 'string'),
             new OA\Property(property: 'avatar', type: 'string', nullable: true),
         ]),
-        new OA\Property(property: 'likes_count', type: 'integer'),
-        new OA\Property(property: 'is_liked', type: 'boolean'),
+        new OA\Property(property: 'likes_count', type: 'integer', nullable: true),
+        new OA\Property(property: 'is_liked', type: 'boolean', nullable: true),
     ],
 )]
 class CommentResource extends JsonResource
@@ -33,8 +34,23 @@ class CommentResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        // Comments waar viewer en auteur geen circle delen worden geredacteerd
+        // tot het minimum dat de client nodig heeft om "X verborgen" te tonen.
+        // Default true zodat single-resource responses (zoals POST store) altijd
+        // de volledige payload teruggeven aan de auteur zelf.
+        $isVisible = (bool) ($this->is_visible ?? true);
+
+        if (! $isVisible) {
+            return [
+                'id' => $this->id,
+                'is_visible' => false,
+                'created_at' => $this->created_at,
+            ];
+        }
+
         return [
             'id' => $this->id,
+            'is_visible' => true,
             'body' => $this->body,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

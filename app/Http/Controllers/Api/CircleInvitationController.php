@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Resources\CircleInvitationResource;
 use App\Models\Circle;
 use App\Models\CircleInvitation;
+use App\Models\User;
 use App\Notifications\CircleInvitationAcceptedNotification;
 use App\Services\MemberPersonSyncer;
 use Illuminate\Http\JsonResponse;
@@ -130,6 +131,8 @@ class CircleInvitationController extends Controller
 
         $memberPersons->attach($circleInvitation->circle, $request->user());
 
+        $this->markReceivedNotificationsAsRead($request->user(), $circleInvitation);
+
         $circleInvitation->inviter->notify(
             new CircleInvitationAcceptedNotification($circleInvitation, $request->user()->name)
         );
@@ -173,6 +176,16 @@ class CircleInvitationController extends Controller
 
         $circleInvitation->update(['status' => InvitationStatus::Declined]);
 
+        $this->markReceivedNotificationsAsRead($request->user(), $circleInvitation);
+
         return response()->json(['message' => 'Invitation declined.']);
+    }
+
+    private function markReceivedNotificationsAsRead(User $user, CircleInvitation $invitation): void
+    {
+        $user->unreadNotifications()
+            ->where('type', 'circle-invitation-received')
+            ->whereRaw("(data::jsonb->>'invitation_id') = ?", [$invitation->id])
+            ->update(['read_at' => now()]);
     }
 }

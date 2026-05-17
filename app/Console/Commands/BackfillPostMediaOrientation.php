@@ -146,20 +146,31 @@ class BackfillPostMediaOrientation extends Command
      */
     private function regenerate(MediaUploadService $media, Filesystem $disk, string $originalPath, string $userId): array
     {
-        $extension = strtolower(pathinfo($originalPath, PATHINFO_EXTENSION)) ?: 'jpg';
+        $sourceExtension = strtolower(pathinfo($originalPath, PATHINFO_EXTENSION)) ?: 'jpg';
+        $isHeic = in_array($sourceExtension, ['heic', 'heif'], true);
+        $displayExtension = $isHeic ? 'jpg' : $sourceExtension;
 
-        $tempSource = tempnam(sys_get_temp_dir(), 'reorient_src_');
+        $tempSource = tempnam(sys_get_temp_dir(), 'reorient_src_').'.'.$sourceExtension;
         file_put_contents($tempSource, $disk->get($originalPath));
 
-        $tempDisplay = tempnam(sys_get_temp_dir(), 'reorient_display_').'.'.$extension;
+        $decodeSource = $tempSource;
+        $tempHeicJpeg = null;
+
+        if ($isHeic) {
+            $tempHeicJpeg = tempnam(sys_get_temp_dir(), 'reorient_heic_').'.jpg';
+            MediaUploadService::decodeHeicToJpeg($tempSource, $tempHeicJpeg);
+            $decodeSource = $tempHeicJpeg;
+        }
+
+        $tempDisplay = tempnam(sys_get_temp_dir(), 'reorient_display_').'.'.$displayExtension;
 
         try {
-            $image = Image::decodePath($tempSource);
+            $image = Image::decodePath($decodeSource);
             $image->orient();
             $image->scaleDown(width: self::MAX_DISPLAY_WIDTH);
             $image->save($tempDisplay, quality: self::DISPLAY_QUALITY);
 
-            $displayFilename = Str::random(40).'.'.$extension;
+            $displayFilename = Str::random(40).'.'.$displayExtension;
             $displayPath = "users/{$userId}/posts/{$displayFilename}";
 
             $disk->put($displayPath, file_get_contents($tempDisplay));
@@ -176,19 +187,29 @@ class BackfillPostMediaOrientation extends Command
         } finally {
             @unlink($tempSource);
             @unlink($tempDisplay);
+
+            if ($tempHeicJpeg !== null) {
+                @unlink($tempHeicJpeg);
+            }
         }
     }
 
     private function originalNeedsReorient(Filesystem $disk, string $originalPath): bool
     {
-        if (! function_exists('exif_read_data')) {
-            return true;
-        }
+        $extension = strtolower(pathinfo($originalPath, PATHINFO_EXTENSION));
 
-        $temp = tempnam(sys_get_temp_dir(), 'reorient_check_');
+        $temp = tempnam(sys_get_temp_dir(), 'reorient_check_').'.'.($extension ?: 'bin');
         file_put_contents($temp, $disk->get($originalPath));
 
         try {
+            if (in_array($extension, ['heic', 'heif'], true)) {
+                return $this->heicNeedsReorient($temp);
+            }
+
+            if (! function_exists('exif_read_data')) {
+                return true;
+            }
+
             $data = @exif_read_data($temp, 'IFD0', true);
             $orientation = $data['IFD0']['Orientation'] ?? null;
 
@@ -197,6 +218,31 @@ class BackfillPostMediaOrientation extends Command
             return true;
         } finally {
             @unlink($temp);
+        }
+    }
+
+    /**
+     * Inspect a HEIC/HEIF file via Imagick. We assume a post needs
+     * re-generation whenever the embedded EXIF Orientation tag is
+     * non-trivial OR when libheif's container transforms disagree with
+     * that tag — exactly the iPhone front-camera case the upload bug
+     * surfaced.
+     */
+    private function heicNeedsReorient(string $path): bool
+    {
+        if (! class_exists(\Imagick::class)) {
+            return true;
+        }
+
+        $im = new \Imagick($path);
+
+        try {
+            $containerOrientation = $im->getImageOrientation();
+            $exifOrientation = (int) ($im->getImageProperties('exif:Orientation')['exif:Orientation'] ?? 1);
+
+            return $containerOrientation > 1 || $exifOrientation > 1;
+        } finally {
+            $im->clear();
         }
     }
 }

@@ -4,6 +4,7 @@ use App\Enums\InvitationStatus;
 use App\Models\Circle;
 use App\Models\CircleInvitation;
 use App\Models\User;
+use App\Notifications\CircleInvitationReceivedNotification;
 
 it('can list pending invitations for the authenticated user', function () {
     $user = User::factory()->create();
@@ -180,6 +181,58 @@ it('returns 404 when cancelling an invitation that does not belong to the circle
     $this->actingAs($owner)
         ->deleteJson("/api/circles/{$circle->id}/invitations/{$invitation->id}")
         ->assertNotFound();
+});
+
+it('marks the received notification as read when accepting an invitation', function () {
+    $user = User::factory()->create();
+    $inviter = User::factory()->create();
+    $circle = Circle::factory()->for($inviter)->create();
+    $invitation = CircleInvitation::factory()->create([
+        'circle_id' => $circle->id,
+        'user_id' => $user->id,
+        'inviter_id' => $inviter->id,
+        'status' => InvitationStatus::Pending,
+    ]);
+
+    $user->notify(new CircleInvitationReceivedNotification($invitation, $inviter->name));
+
+    // Unrelated received notification for a different invitation should stay unread
+    $otherInvitation = CircleInvitation::factory()->create([
+        'user_id' => $user->id,
+        'status' => InvitationStatus::Pending,
+    ]);
+    $user->notify(new CircleInvitationReceivedNotification($otherInvitation, $inviter->name));
+
+    expect($user->unreadNotifications()->count())->toBe(2);
+
+    $this->actingAs($user)
+        ->postJson("/api/circle-invitations/{$invitation->id}/accept")
+        ->assertOk();
+
+    expect($user->unreadNotifications()->count())->toBe(1);
+    expect($user->unreadNotifications()->first()->data['invitation_id'])->toBe($otherInvitation->id);
+});
+
+it('marks the received notification as read when declining an invitation', function () {
+    $user = User::factory()->create();
+    $inviter = User::factory()->create();
+    $circle = Circle::factory()->for($inviter)->create();
+    $invitation = CircleInvitation::factory()->create([
+        'circle_id' => $circle->id,
+        'user_id' => $user->id,
+        'inviter_id' => $inviter->id,
+        'status' => InvitationStatus::Pending,
+    ]);
+
+    $user->notify(new CircleInvitationReceivedNotification($invitation, $inviter->name));
+
+    expect($user->unreadNotifications()->count())->toBe(1);
+
+    $this->actingAs($user)
+        ->postJson("/api/circle-invitations/{$invitation->id}/decline")
+        ->assertOk();
+
+    expect($user->unreadNotifications()->count())->toBe(0);
 });
 
 it('can accept a new invitation when a previous one was already accepted for the same circle', function () {

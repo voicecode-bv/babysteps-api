@@ -17,6 +17,17 @@ function orientationFixture(): UploadedFile
     );
 }
 
+function heicOrientationFixture(): UploadedFile
+{
+    return new UploadedFile(
+        __DIR__.'/../../fixtures/photo-heic-orientation-mismatch.heic',
+        'photo.heic',
+        'image/heic',
+        null,
+        true,
+    );
+}
+
 it('physically rotates iOS-style images when storing the display variant', function () {
     Storage::fake('public');
     $user = User::factory()->create();
@@ -93,4 +104,42 @@ it('leaves the stored original untouched with its EXIF orientation tag preserved
 
     $exif = @exif_read_data($originalPath, 'IFD0', true);
     expect($exif['IFD0']['Orientation'])->toBe(6);
+});
+
+it('corrects HEIC uploads where container orientation and EXIF tag disagree', function () {
+    if (! in_array('HEIC', Imagick::queryFormats('HEIC'), true)) {
+        $this->markTestSkipped('Imagick build lacks HEIC support');
+    }
+
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->postJson('/api/posts', [
+            'media' => heicOrientationFixture(),
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertCreated();
+
+    $post = Post::first();
+    $disk = Storage::disk('public');
+    $displayPath = $disk->path($post->media_url);
+
+    // Source HEIC: container reports orientation 1 (libheif already
+    // applied the irot transform during decode), but embedded EXIF
+    // Orientation tag = 3. The display variant must not pick up that
+    // stale tag and apply a phantom 180° rotation.
+    $sourceWidth = 3088;
+    $sourceHeight = 2316;
+    $maxWidth = 1920;
+    $expectedWidth = $maxWidth;
+    $expectedHeight = (int) round($sourceHeight * ($maxWidth / $sourceWidth));
+
+    [$width, $height] = getimagesize($displayPath);
+    expect($width)->toBe($expectedWidth)
+        ->and($height)->toBe($expectedHeight);
+
+    $exif = @exif_read_data($displayPath, 'IFD0', true);
+    expect($exif['IFD0']['Orientation'] ?? 1)->toBe(1);
 });

@@ -62,6 +62,7 @@ class UserSearchController extends Controller
         $query = User::query()
             ->select(['id', 'name', 'username', 'avatar', 'avatar_thumbnail'])
             ->whereKeyNot($authId)
+            ->where('searchable', true)
             ->where(function ($query) use ($circleIds) {
                 $query->whereIn('id', Circle::query()
                     ->select('user_id')
