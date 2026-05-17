@@ -9,7 +9,9 @@ use App\Models\User;
 use App\Notifications\CircleInvitationNotification;
 use App\Notifications\CircleInvitationReceivedNotification;
 use App\Notifications\CircleMemberInvitedByMemberNotification;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 
 it('sends an invitation instead of adding a member directly', function () {
     $owner = User::factory()->create();
@@ -523,4 +525,84 @@ it('requires authentication to leave a circle', function () {
 
     $this->postJson("/api/circles/{$circle->id}/leave")
         ->assertUnauthorized();
+});
+
+it('prunes notifications for a removed member who loses post access', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create();
+    $circle->members()->attach($member);
+
+    $post = Post::factory()->for($owner)->create();
+    $post->circles()->attach($circle);
+
+    DB::table('notifications')->insert([
+        'id' => (string) Str::uuid(),
+        'type' => 'new-circle-post',
+        'notifiable_type' => User::class,
+        'notifiable_id' => $member->id,
+        'data' => json_encode(['post_id' => $post->id]),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->actingAs($owner)
+        ->deleteJson("/api/circles/{$circle->id}/members/{$member->id}")
+        ->assertNoContent();
+
+    expect(DB::table('notifications')->where('notifiable_id', $member->id)->count())->toBe(0);
+});
+
+it('keeps notifications for a removed member who still has access via another circle', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $removed = Circle::factory()->for($owner)->create();
+    $kept = Circle::factory()->for($owner)->create();
+    $removed->members()->attach($member);
+    $kept->members()->attach($member);
+
+    $post = Post::factory()->for($owner)->create();
+    $post->circles()->attach([$removed->id, $kept->id]);
+
+    DB::table('notifications')->insert([
+        'id' => (string) Str::uuid(),
+        'type' => 'new-circle-post',
+        'notifiable_type' => User::class,
+        'notifiable_id' => $member->id,
+        'data' => json_encode(['post_id' => $post->id]),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->actingAs($owner)
+        ->deleteJson("/api/circles/{$removed->id}/members/{$member->id}")
+        ->assertNoContent();
+
+    expect(DB::table('notifications')->where('notifiable_id', $member->id)->count())->toBe(1);
+});
+
+it('prunes notifications for a member who voluntarily leaves a circle', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create();
+    $circle->members()->attach($member);
+
+    $post = Post::factory()->for($owner)->create();
+    $post->circles()->attach($circle);
+
+    DB::table('notifications')->insert([
+        'id' => (string) Str::uuid(),
+        'type' => 'new-circle-post',
+        'notifiable_type' => User::class,
+        'notifiable_id' => $member->id,
+        'data' => json_encode(['post_id' => $post->id]),
+        'created_at' => now(),
+        'updated_at' => now(),
+    ]);
+
+    $this->actingAs($member)
+        ->postJson("/api/circles/{$circle->id}/leave")
+        ->assertNoContent();
+
+    expect(DB::table('notifications')->where('notifiable_id', $member->id)->count())->toBe(0);
 });
