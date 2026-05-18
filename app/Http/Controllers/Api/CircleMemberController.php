@@ -176,6 +176,8 @@ class CircleMemberController extends Controller
         $circle->members()->detach($user->id);
         $memberPersons->detach($circle, $user);
 
+        $this->pruneNotificationsForRemovedMember($circle, $user);
+
         return response()->json(null, 204);
     }
 
@@ -215,6 +217,8 @@ class CircleMemberController extends Controller
             ->whereIn('post_id', $user->posts()->select('id'))
             ->delete();
 
+        $this->pruneNotificationsForRemovedMember($circle, $user);
+
         $defaultCircleIds = $user->default_circle_ids ?? [];
 
         if (in_array($circle->id, $defaultCircleIds, true)) {
@@ -227,5 +231,24 @@ class CircleMemberController extends Controller
         }
 
         return response()->json(null, 204);
+    }
+
+    /**
+     * Een user die uit een circle wordt verwijderd (of zelf vertrekt)
+     * verliest toegang tot posts die alléén in deze circle stonden. Hun
+     * `NewCirclePost`/`PostCommented`/`PostLiked`-notificaties bevatten
+     * een diep-link naar die posts; zonder cleanup blijft die clickable
+     * en de nieuwe view-policy reageert dan met een nutteloze 403.
+     * Spiegelt `Post::pruneNotificationsForLostAccess()` vanuit de
+     * circle-kant in plaats van de post-kant.
+     */
+    private function pruneNotificationsForRemovedMember(Circle $circle, User $user): void
+    {
+        $circle->posts()
+            ->chunkById(200, function ($posts) use ($user) {
+                foreach ($posts as $post) {
+                    $post->pruneNotificationsForUserIfLostAccess($user);
+                }
+            });
     }
 }

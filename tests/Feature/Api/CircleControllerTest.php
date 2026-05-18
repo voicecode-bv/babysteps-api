@@ -3,7 +3,10 @@
 use App\Enums\InvitationStatus;
 use App\Models\Circle;
 use App\Models\CircleInvitation;
+use App\Models\Post;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 it('returns circles owned by the user with is_owner true', function () {
     $user = User::factory()->create();
@@ -309,4 +312,42 @@ it('ignores non-pending invitations when filtering by not_member_username', func
         ->assertOk();
 
     expect($response->json('data.0.pending_invitations'))->toBeEmpty();
+});
+
+it('prunes notifications for non-owners when a circle is deleted and posts lose all access', function () {
+    $owner = User::factory()->create();
+    $member = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create();
+    $circle->members()->attach($member);
+
+    $post = Post::factory()->for($owner)->create();
+    $post->circles()->attach($circle);
+
+    DB::table('notifications')->insert([
+        [
+            'id' => (string) Str::uuid(),
+            'type' => 'new-circle-post',
+            'notifiable_type' => User::class,
+            'notifiable_id' => $member->id,
+            'data' => json_encode(['post_id' => $post->id]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+        [
+            'id' => (string) Str::uuid(),
+            'type' => 'post-commented',
+            'notifiable_type' => User::class,
+            'notifiable_id' => $owner->id,
+            'data' => json_encode(['post_id' => $post->id]),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ],
+    ]);
+
+    $this->actingAs($owner)
+        ->deleteJson("/api/circles/{$circle->id}")
+        ->assertNoContent();
+
+    expect(DB::table('notifications')->where('notifiable_id', $member->id)->count())->toBe(0);
+    expect(DB::table('notifications')->where('notifiable_id', $owner->id)->count())->toBe(1);
 });

@@ -9,6 +9,7 @@ use App\Http\Requests\UpdateCircleRequest;
 use App\Http\Requests\UpdateCircleSettingsRequest;
 use App\Http\Resources\CircleResource;
 use App\Models\Circle;
+use App\Models\Post;
 use App\Models\User;
 use App\Services\MediaUploadService;
 use App\Services\MemberPersonSyncer;
@@ -298,7 +299,23 @@ class CircleController extends Controller
             $disk->delete($circle->photo);
         }
 
+        // Snapshot voor cleanup: posts die ná de cascade mogelijk geen
+        // andere circle meer hebben en daarmee voor alle niet-owners
+        // ontoegankelijk worden. Notificaties blijven anders hangen als
+        // dead deeplinks.
+        $affectedPostIds = $circle->posts()->pluck('posts.id')->all();
+
         $circle->delete();
+
+        if ($affectedPostIds !== []) {
+            Post::query()
+                ->whereIn('id', $affectedPostIds)
+                ->chunkById(200, function ($posts) {
+                    foreach ($posts as $post) {
+                        $post->pruneNotificationsForLostAccess();
+                    }
+                });
+        }
 
         return response()->json(null, 204);
     }

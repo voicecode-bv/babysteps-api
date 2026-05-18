@@ -76,6 +76,37 @@ class Post extends Model
     }
 
     /**
+     * Verwijder database-notificaties voor één specifieke user als die
+     * de post niet langer mag zien (geen owner én geen overige gedeelde
+     * circle). Aangeroepen vanuit member-removal/leave-flows in
+     * CircleMemberController: per post in de circle die de user verlaat
+     * checken we of er nog een andere toegangsroute is, anders prunen we
+     * die ene user zijn notificaties.
+     */
+    public function pruneNotificationsForUserIfLostAccess(User $user): int
+    {
+        if ($user->id === $this->user_id) {
+            return 0;
+        }
+
+        $stillAccessible = $this->circles()
+            ->where(function ($q) use ($user) {
+                $q->where('circles.user_id', $user->id)
+                    ->orWhereHas('members', fn ($m) => $m->where('users.id', $user->id));
+            })
+            ->exists();
+
+        if ($stillAccessible) {
+            return 0;
+        }
+
+        return DB::table('notifications')
+            ->whereRaw("data::jsonb->>'post_id' = ?", [(string) $this->id])
+            ->where('notifiable_id', $user->id)
+            ->delete();
+    }
+
+    /**
      * Sync the tags attached to this post and keep each tag's denormalized
      * `usage_count` in step with the changes.
      *
