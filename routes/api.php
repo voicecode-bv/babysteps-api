@@ -38,6 +38,7 @@ use App\Http\Controllers\Api\Subscriptions\MollieCheckoutController;
 use App\Http\Controllers\Api\Subscriptions\PlansController;
 use App\Http\Controllers\Api\Subscriptions\SubscriptionController;
 use App\Http\Controllers\Api\TagController;
+use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserSearchController;
 use App\Http\Controllers\Api\WaitingListEntryController;
 use App\Http\Controllers\Api\Webhooks\AppleWebhookController;
@@ -92,6 +93,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/feed', FeedController::class)->name('api.feed');
 
     Route::get('/photos/map', PhotoMapController::class)->name('api.photos.map');
+
+    Route::post('/uploads', [UploadController::class, 'init'])->name('api.uploads.init');
+    Route::post('/uploads/{upload}/chunk', [UploadController::class, 'chunk'])->name('api.uploads.chunk');
+    Route::delete('/uploads/{upload}', [UploadController::class, 'abort'])->name('api.uploads.abort');
 
     Route::get('/posts/{post}', [PostController::class, 'show'])->name('api.posts.show');
     Route::post('/posts', [PostController::class, 'store'])->middleware('throttle:30,1')->name('api.posts.store');

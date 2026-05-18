@@ -200,6 +200,12 @@ class PostController extends Controller
 
         $post->load(['user:id,name,username,avatar', 'media']);
 
+        // Verzilverde upload-sessies opruimen nu de bytes definitief in storage
+        // zijn beland; GcUploadSessions vangt het anders later op.
+        foreach ($request->consumedUploadTokens as $token) {
+            UploadController::destroySession($token);
+        }
+
         return (new PostResource($post))
             ->response()
             ->setStatusCode(201);

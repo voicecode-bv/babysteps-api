@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Http\Controllers\Api\UploadController;
 use App\Rules\AccessibleCircle;
 use App\Rules\MaxImageDimensions;
 use App\Rules\MaxVideoDuration;
@@ -9,6 +10,7 @@ use App\Rules\OwnedTag;
 use App\Rules\TaggablePerson;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
 
 class StorePostRequest extends FormRequest
@@ -38,6 +40,12 @@ class StorePostRequest extends FormRequest
      * `media_metadata` is sent as a JSON string by the mobile BFF (multipart
      * does not serialize nested arrays cleanly). Decode it up-front so the
      * standard validator can walk `media_metadata.*.taken_at` etc.
+     *
+     * Daarnaast: clients die hun media chunked geüpload hebben sturen geen
+     * multipart `media`-veld maar een `media_token` (single) of
+     * `media_tokens[]` (multi). Die zetten we hier om in `UploadedFile`s
+     * zodat de bestaande regels (mimes, dimensions, video duration) één-op-één
+     * blijven werken.
      */
     protected function prepareForValidation(): void
     {
@@ -48,6 +56,125 @@ class StorePostRequest extends FormRequest
                 $this->merge(['media_metadata' => $decoded]);
             }
         }
+
+        $this->materializeTokensAsFiles();
+    }
+
+    /**
+     * Sessions waarvan we de geassembleerde file als `media` hebben ingevuld;
+     * `PostController` ruimt ze na succesvolle store op.
+     *
+     * @var array<int, string>
+     */
+    public array $consumedUploadTokens = [];
+
+    private function materializeTokensAsFiles(): void
+    {
+        $user = $this->user();
+
+        if ($user === null) {
+            return;
+        }
+
+        // Bewust geen `hasFile('media')` — die roept `allFiles()` aan en cacht
+        // het lege resultaat in `$this->convertedFiles`, waarna onze latere
+        // `$this->files->set('media', …)` niet meer terug te zien is. Direct
+        // tegen de underlying FileBag praten omzeilt die cache.
+        if ($this->files->has('media')) {
+            return;
+        }
+
+        $singleToken = $this->input('media_token');
+        $multipleTokens = $this->input('media_tokens');
+
+        if (is_string($singleToken) && $singleToken !== '') {
+            $file = $this->resolveTokenAsFile($singleToken, $user->id);
+
+            if ($file !== null) {
+                $this->files->set('media', $file);
+                $this->invalidateConvertedFilesCache();
+            }
+
+            return;
+        }
+
+        if (is_array($multipleTokens) && $multipleTokens !== []) {
+            $files = [];
+
+            foreach ($multipleTokens as $token) {
+                if (! is_string($token)) {
+                    continue;
+                }
+
+                $file = $this->resolveTokenAsFile($token, $user->id);
+
+                if ($file !== null) {
+                    $files[] = $file;
+                }
+            }
+
+            if ($files !== []) {
+                $this->files->set('media', $files);
+                $this->invalidateConvertedFilesCache();
+            }
+        }
+    }
+
+    /**
+     * Reset de `convertedFiles` cache van `Illuminate\Http\Request` zodat een
+     * volgende `file()`/`allFiles()`-call onze net-geïnjecteerde UploadedFile
+     * objecten wel ziet. Zonder dit blijft de cache de lege snapshot houden.
+     */
+    private function invalidateConvertedFilesCache(): void
+    {
+        $reflection = new \ReflectionClass($this);
+        $base = $reflection->getParentClass();
+
+        while ($base !== false && $base->getName() !== Request::class) {
+            $base = $base->getParentClass();
+        }
+
+        if ($base === false || ! $base->hasProperty('convertedFiles')) {
+            return;
+        }
+
+        $property = $base->getProperty('convertedFiles');
+        $property->setAccessible(true);
+        $property->setValue($this, null);
+    }
+
+    private function resolveTokenAsFile(string $token, string $userId): ?UploadedFile
+    {
+        $resolved = UploadController::consumeAssembled($token, $userId);
+
+        if ($resolved === null) {
+            return null;
+        }
+
+        $this->consumedUploadTokens[] = $token;
+
+        // `mimes:`-validatie vergelijkt de extensie van de originele filename
+        // tegen guesseable mime types. We hebben alleen de mime type, dus
+        // mappen we terug naar de extensie waar Laravel `mimes:` mee werkt.
+        $extension = match ($resolved['mime_type']) {
+            'image/jpeg' => 'jpg',
+            'image/png' => 'png',
+            'image/gif' => 'gif',
+            'image/heic' => 'heic',
+            'image/heif' => 'heif',
+            'video/mp4' => 'mp4',
+            'video/quicktime' => 'mov',
+            'video/x-m4v' => 'm4v',
+            default => 'bin',
+        };
+
+        return new UploadedFile(
+            $resolved['path'],
+            "upload.{$extension}",
+            $resolved['mime_type'],
+            null,
+            true,
+        );
     }
 
     /**
@@ -75,6 +202,8 @@ class StorePostRequest extends FormRequest
     {
         return [
             'media' => ['required', 'file', 'mimes:'.self::MIME_TYPES, 'max:'.self::MAX_KB, new MaxImageDimensions(self::MAX_IMAGE_DIMENSION, self::MAX_IMAGE_DIMENSION), new MaxVideoDuration(180)],
+            'media_token' => ['sometimes', 'uuid'],
+            'media_tokens' => ['prohibited'],
             'caption' => ['nullable', 'string', 'max:2200'],
             'location' => ['nullable', 'string', 'max:255'],
             'taken_at' => ['nullable', 'date', 'before_or_equal:now', 'after:1990-01-01'],
@@ -97,6 +226,9 @@ class StorePostRequest extends FormRequest
         return [
             'media' => ['required', 'array', 'min:1', 'max:'.self::MAX_MEDIA_ITEMS],
             'media.*' => ['file', 'mimes:'.self::MIME_TYPES, 'max:'.self::MAX_KB, new MaxImageDimensions(self::MAX_IMAGE_DIMENSION, self::MAX_IMAGE_DIMENSION), new MaxVideoDuration(180)],
+            'media_token' => ['prohibited'],
+            'media_tokens' => ['sometimes', 'array', 'max:'.self::MAX_MEDIA_ITEMS],
+            'media_tokens.*' => ['uuid'],
             'media_metadata' => ['nullable', 'array', 'max:'.self::MAX_MEDIA_ITEMS],
             'media_metadata.*' => ['array'],
             'media_metadata.*.taken_at' => ['nullable', 'date', 'before_or_equal:now', 'after:1990-01-01'],

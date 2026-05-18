@@ -20,7 +20,11 @@ it('can register a new user', function () {
         ->assertJsonStructure([
             'token',
             'user' => ['id', 'name', 'username', 'email'],
-        ]);
+        ])
+        // Zie login: UserResource scoped email op `$isSelf` en zonder
+        // Auth::setUser() vóór de resource is dat null. De mobiele BFF
+        // syncLocalUser() blaast dan op met een NOT NULL constraint.
+        ->assertJsonPath('user.email', 'john@example.com');
 
     $this->assertDatabaseHas('users', [
         'email' => 'john@example.com',
@@ -131,7 +135,12 @@ it('can login with valid credentials', function () {
         ->assertJsonStructure([
             'token',
             'user' => ['id', 'name', 'username', 'email'],
-        ]);
+        ])
+        // E-mail moet daadwerkelijk de waarde bevatten — UserResource scoped
+        // `email` op `$isSelf`, dus zonder Auth::setUser() vóór de resource
+        // bouw zou hier `null` uitkomen en de mobiele BFF zou crashen op de
+        // NOT NULL constraint van `users.email`.
+        ->assertJsonPath('user.email', $user->email);
 });
 
 it('rejects login with invalid password', function () {

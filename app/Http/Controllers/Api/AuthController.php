@@ -11,6 +11,7 @@ use App\Models\CircleInvitation;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
 use OpenApi\Attributes as OA;
@@ -56,6 +57,13 @@ class AuthController extends Controller
                 'email' => [__('auth.failed')],
             ]);
         }
+
+        // Sanctum heeft het token van deze request nog niet gezien (het wordt
+        // hieronder pas aangemaakt), dus `$request->user()` is null als
+        // UserResource zelf moet bepalen of de caller de eigenaar is en email
+        // mag zien. Expliciet zetten zodat de PII-scoping in UserResource
+        // (`$isSelf`) klopt.
+        Auth::setUser($user);
 
         return response()->json([
             'token' => $user->createToken($request->device_name)->plainTextToken,
@@ -107,6 +115,10 @@ class AuthController extends Controller
             ->where('status', InvitationStatus::Pending)
             ->whereNull('user_id')
             ->update(['user_id' => $user->id]);
+
+        // Zie login(): zonder gezette auth user laat UserResource email
+        // zien als null vanwege de PII-scoping.
+        Auth::setUser($user);
 
         return response()->json([
             'token' => $user->createToken($request->device_name)->plainTextToken,

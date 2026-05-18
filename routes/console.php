@@ -14,3 +14,5 @@ Schedule::command('storage:reconcile-user-usage')
     ->dailyAt('03:30')
     ->onOneServer()
     ->withoutOverlapping();
+
+Schedule::command('uploads:gc-sessions')->hourly();
