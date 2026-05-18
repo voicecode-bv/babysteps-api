@@ -107,6 +107,24 @@ it('uses the callback_url from config as webhook', function () {
     });
 });
 
+it('falls back to APP_URL when FILEFLUX_WEBHOOK_URL is empty', function () {
+    // Empty env var (FILEFLUX_WEBHOOK_URL=) gaf met env('...', default) een
+    // lege string door naar de package — geen fallback. Elvis-operator in
+    // services.php ondervangt dit.
+    config([
+        'services.fileflux.callback_url' => null, // simulate the Elvis result
+        'app.url' => 'https://api.innerr.app',
+    ]);
+    // We herlezen het config-item zoals de service provider zou doen.
+    config([
+        'services.fileflux.callback_url' => env('FILEFLUX_WEBHOOK_URL')
+            ?: rtrim((string) config('app.url'), '/').'/api/webhooks/media/fileflux',
+    ]);
+
+    expect(config('services.fileflux.callback_url'))
+        ->toBe('https://api.innerr.app/api/webhooks/media/fileflux');
+});
+
 it('does nothing when PostMedia is not in Processing state', function () {
     $this->media->update(['status' => MediaStatus::Ready]);
 

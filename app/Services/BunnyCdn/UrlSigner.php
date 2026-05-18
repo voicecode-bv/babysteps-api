@@ -80,9 +80,11 @@ class UrlSigner
             throw new RuntimeException('Expiration must be a positive Unix timestamp.');
         }
 
-        /** @var array<string, string> $params */
-        $params = ['token_path' => rawurlencode($tokenPath)];
-        $signingData = $this->buildSigningData($params);
+        // BunnyCDN-spec: signing data gebruikt RAW (unencoded) waarden, zelfs
+        // wanneer de URL zelf URL-encoded varianten bevat. Eerder gebruikten we
+        // de encoded waarde in beide — intern consistent, maar BunnyCDN's
+        // verifier computeert met raw → 403 op alle segments.
+        $signingData = $this->buildSigningData(['token_path' => $tokenPath]);
 
         $token = $this->generateToken($tokenPath, $expires, $signingData);
 
@@ -91,7 +93,7 @@ class UrlSigner
         return $this->baseUrl.$tokenPath.$fileSuffix
             .'?token='.$token
             .'&expires='.$expires
-            .'&token_path='.$params['token_path'];
+            .'&token_path='.rawurlencode($tokenPath);
     }
 
     /**

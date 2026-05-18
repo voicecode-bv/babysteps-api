@@ -112,3 +112,44 @@ it('signs a directory token with token_path included in the signature and URL', 
         ->toContain('expires='.$expiresAt->getTimestamp())
         ->toContain('token_path='.rawurlencode('/users/abc/posts/uuid/'));
 });
+
+it('computes the signature with the raw token_path value (BunnyCDN spec)', function () {
+    // BunnyCDN's verifier joint query-params alphabetisch met raw values.
+    // De URL bevat rawurlencode, maar het token moet op de raw value zijn
+    // berekend — anders krijgt elke segment-request 403 ondanks geldige token.
+    $expiresAt = Carbon::parse('2026-05-15 12:00:00', 'UTC');
+    $tokenPath = '/users/abc/posts/uuid/';
+    $expires = $expiresAt->getTimestamp();
+
+    // Forward-compute zoals BunnyCDN het zou doen: HMAC over
+    //   tokenPath + expires + 'token_path=' + rawTokenPath + '' (no userIp)
+    $message = $tokenPath.$expires.'token_path='.$tokenPath;
+    $expectedHmac = hash_hmac('sha256', $message, 'test-token-key', true);
+    $expectedToken = 'HS256-'.rtrim(strtr(base64_encode($expectedHmac), '+/', '-_'), '=');
+
+    $url = $this->signer->signDirectory(
+        'users/abc/posts/uuid',
+        'index.m3u8',
+        $expiresAt,
+    );
+
+    expect($url)->toContain('token='.$expectedToken);
+});
+
+it('signs segments in a flat HLS layout (pbmedia/laravel-ffmpeg default)', function () {
+    // pbmedia/laravel-ffmpeg produceert flat output: master.m3u8, master_2.m3u8
+    // én master_2_1200_00000.ts alle in dezelfde directory. We moeten elke
+    // segment-request signen tegen het directory-token-pad van de hele HLS map.
+    $expiresAt = Carbon::parse('2026-05-15 12:00:00', 'UTC');
+
+    $url = $this->signer->signDirectory(
+        'users/abc/posts/hls/uuid',
+        'master_2_1200_00000.ts',
+        $expiresAt,
+    );
+
+    expect($url)
+        ->toStartWith('https://media.innerr.app/users/abc/posts/hls/uuid/master_2_1200_00000.ts?')
+        ->toContain('token=HS256-')
+        ->toContain('token_path='.rawurlencode('/users/abc/posts/hls/uuid/'));
+});

@@ -94,9 +94,11 @@ return [
         'api_key' => env('FILEFLUX_API_KEY'),
         'webhook_secret' => env('FILEFLUX_WEBHOOK_SIGNATURE'),
         // Eén env voor de callback URL — gedeeld met de package's default in
-        // `config/fileflux.php`. App fallback alleen voor lokaal dev; in
-        // productie altijd expliciet zetten.
-        'callback_url' => env('FILEFLUX_WEBHOOK_URL', env('APP_URL').'/api/webhooks/media/fileflux'),
+        // `config/fileflux.php`. Elvis-operator zodat een lege `FILEFLUX_WEBHOOK_URL=`
+        // in .env terugvalt naar APP_URL (env() doet dat alleen voor `null`, niet
+        // voor lege string). In productie altijd expliciet zetten.
+        'callback_url' => env('FILEFLUX_WEBHOOK_URL')
+            ?: rtrim((string) config('app.url'), '/').'/api/webhooks/media/fileflux',
         'job_timeout_minutes' => env('FILEFLUX_JOB_TIMEOUT_MINUTES', 30),
 
         /*
