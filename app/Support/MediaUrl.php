@@ -29,6 +29,14 @@ class MediaUrl
 
         $expires = static::expiry();
 
+        // HLS-master playlist: één directory-token authoriseert master.m3u8 +
+        // alle variant-playlists + segments onder dezelfde prefix. Eén signed
+        // URL is genoeg om de hele stream af te spelen — anders zou elke
+        // segment een eigen signed URL nodig hebben.
+        if (str_ends_with($path, '.m3u8')) {
+            return static::signHlsMaster($path, $expires);
+        }
+
         $bunny = BunnyCdnUrlSigner::fromConfig();
 
         if ($bunny !== null) {
@@ -43,6 +51,26 @@ class MediaUrl
             } catch (\RuntimeException) {
                 // Local disk doesn't support temporaryUrl, fall through
             }
+        }
+
+        return URL::signedRoute('api.media', ['path' => $path], $expires);
+    }
+
+    /**
+     * Sign een HLS master playlist met een BunnyCDN directory-token. Voor
+     * dev/test omgevingen zonder BunnyCDN valt het terug naar een per-file
+     * signed route — voldoende voor unit tests, maar in productie wil je
+     * altijd BunnyCDN met directory-tokens zodat segments delen.
+     */
+    protected static function signHlsMaster(string $path, \DateTimeInterface $expires): string
+    {
+        $bunny = BunnyCdnUrlSigner::fromConfig();
+
+        if ($bunny !== null) {
+            $directory = dirname($path).'/';
+            $filename = basename($path);
+
+            return $bunny->signDirectory($directory, $filename, $expires);
         }
 
         return URL::signedRoute('api.media', ['path' => $path], $expires);

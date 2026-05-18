@@ -78,6 +78,51 @@ return [
         'webhook_secret' => env('MOLLIE_WEBHOOK_SECRET'),
     ],
 
+    /*
+     * FileFlux is een externe Laravel-app met ffmpeg-runtime die video-uploads
+     * voor ons transcodeert tot HLS. Wanneer `enabled` true is, dispatcht
+     * PostController een SubmitVideoToFileFlux job ipv lokale TranscodeVideo;
+     * de lokale ffmpeg-fallback blijft actief voor avatars, cirkel-photos, en
+     * als veiligheidsnet bij FileFlux outage.
+     */
+    'fileflux' => [
+        'enabled' => env('FILEFLUX_ENABLED', false),
+        // De codingmonkeys/laravel-fileflux package leest project_id, api_key,
+        // webhook.signature zelf uit env (zie vendor/.../config/fileflux.php).
+        // We mirroren ze hier alleen voor handige toegang in onze eigen code.
+        'project_id' => env('FILEFLUX_PROJECT_ID'),
+        'api_key' => env('FILEFLUX_API_KEY'),
+        'webhook_secret' => env('FILEFLUX_WEBHOOK_SIGNATURE'),
+        'callback_url' => env('FILEFLUX_CALLBACK_URL', env('APP_URL').'/api/webhooks/media/fileflux'),
+        'job_timeout_minutes' => env('FILEFLUX_JOB_TIMEOUT_MINUTES', 30),
+
+        /*
+         * HLS ladder config. Verschil tussen renditions is bewust gefaseerd —
+         * 1080p voor wifi, 720p voor goed 4G, 480p als veilige fallback bij
+         * slecht 4G/3G. HEVC kan later toegevoegd worden door codec='hevc'
+         * varianten parallel naast deze H.264 ladder te zetten.
+         */
+        'ladder' => [
+            'codec' => 'h264',
+            'segment_duration' => 6,
+            'audio' => [
+                'codec' => 'aac',
+                'bitrate' => 128,
+                'channels' => 2,
+            ],
+            'renditions' => [
+                ['name' => 'v1080', 'height' => 1080, 'video_bitrate' => 5000],
+                ['name' => 'v720', 'height' => 720, 'video_bitrate' => 2800],
+                ['name' => 'v480', 'height' => 480, 'video_bitrate' => 1200],
+            ],
+            'poster' => [
+                'enabled' => true,
+                'filename' => 'poster.jpg',
+                'timestamp_seconds' => 1.0,
+            ],
+        ],
+    ],
+
     'bunny_cdn' => [
         /*
          * Base URL of the Bunny pull zone, e.g. https://media.innerr.app.

@@ -16,3 +16,5 @@ Schedule::command('storage:reconcile-user-usage')
     ->withoutOverlapping();
 
 Schedule::command('uploads:gc-sessions')->hourly();
+
+Schedule::command('media:reconcile-fileflux-jobs')->everyFiveMinutes();

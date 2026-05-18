@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StorePostRequest;
 use App\Http\Requests\UpdatePostRequest;
 use App\Http\Resources\PostResource;
+use App\Jobs\SubmitVideoToFileFlux;
 use App\Jobs\TranscodeVideo;
 use App\Models\Person;
 use App\Models\Post;
@@ -156,7 +157,14 @@ class PostController extends Controller
             ]);
 
             if ($data['type'] === 'video') {
-                TranscodeVideo::dispatch($postMedia);
+                // Feature-flagged switch: FileFlux levert HLS multi-rendition
+                // (1080p/720p/480p) als die enabled is; anders blijft de oude
+                // lokale ffmpeg-pipeline actief. Beide paden eindigen op
+                // `status: Ready` zodat de client de transitie niet hoeft te
+                // onderscheiden.
+                config('services.fileflux.enabled')
+                    ? SubmitVideoToFileFlux::dispatch($postMedia)
+                    : TranscodeVideo::dispatch($postMedia);
             }
         }
 

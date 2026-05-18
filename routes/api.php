@@ -42,6 +42,7 @@ use App\Http\Controllers\Api\UploadController;
 use App\Http\Controllers\Api\UserSearchController;
 use App\Http\Controllers\Api\WaitingListEntryController;
 use App\Http\Controllers\Api\Webhooks\AppleWebhookController;
+use App\Http\Controllers\Api\Webhooks\FileFluxWebhookController;
 use App\Http\Controllers\Api\Webhooks\GoogleWebhookController;
 use App\Http\Controllers\Api\Webhooks\MollieWebhookController;
 use App\Http\Controllers\MediaController;
@@ -84,6 +85,11 @@ Route::prefix('webhooks/subscriptions')->middleware('throttle:120,1')->group(fun
     Route::post('apple', AppleWebhookController::class)->name('api.webhooks.subscriptions.apple');
     Route::post('google', GoogleWebhookController::class)->name('api.webhooks.subscriptions.google');
     Route::post('mollie', MollieWebhookController::class)->name('api.webhooks.subscriptions.mollie');
+});
+
+Route::prefix('webhooks/media')->middleware('throttle:120,1')->group(function () {
+    Route::post('fileflux', FileFluxWebhookController::class)
+        ->name('api.webhooks.media.fileflux');
 });
 
 Route::middleware('auth:sanctum')->group(function () {

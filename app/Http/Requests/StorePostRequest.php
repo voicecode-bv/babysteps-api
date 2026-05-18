@@ -15,9 +15,12 @@ use Illuminate\Http\UploadedFile;
 
 class StorePostRequest extends FormRequest
 {
-    private const MIME_TYPES = 'jpg,jpeg,png,gif,heic,heif,mp4,mov,m4v';
+    private const MIME_TYPES = 'jpg,jpeg,png,gif,heic,heif,mp4,mov,m4v,webm';
 
-    private const MAX_KB = 256000;
+    // 1 GB. Verhoogd van 250 MB nu FileFlux op een dedicated machine de
+    // transcoding doet — lokale ffmpeg-fallback heeft genoeg memory_limit
+    // (700M) om bestanden tot deze grens te verwerken, zij het langzamer.
+    private const MAX_KB = 1024000;
 
     public const MAX_MEDIA_ITEMS = 10;
 
@@ -201,7 +204,7 @@ class StorePostRequest extends FormRequest
     private function singleRules(): array
     {
         return [
-            'media' => ['required', 'file', 'mimes:'.self::MIME_TYPES, 'max:'.self::MAX_KB, new MaxImageDimensions(self::MAX_IMAGE_DIMENSION, self::MAX_IMAGE_DIMENSION), new MaxVideoDuration(180)],
+            'media' => ['required', 'file', 'mimes:'.self::MIME_TYPES, 'max:'.self::MAX_KB, new MaxImageDimensions(self::MAX_IMAGE_DIMENSION, self::MAX_IMAGE_DIMENSION), new MaxVideoDuration(600)],
             'media_token' => ['sometimes', 'uuid'],
             'media_tokens' => ['prohibited'],
             'caption' => ['nullable', 'string', 'max:2200'],
@@ -225,7 +228,7 @@ class StorePostRequest extends FormRequest
     {
         return [
             'media' => ['required', 'array', 'min:1', 'max:'.self::MAX_MEDIA_ITEMS],
-            'media.*' => ['file', 'mimes:'.self::MIME_TYPES, 'max:'.self::MAX_KB, new MaxImageDimensions(self::MAX_IMAGE_DIMENSION, self::MAX_IMAGE_DIMENSION), new MaxVideoDuration(180)],
+            'media.*' => ['file', 'mimes:'.self::MIME_TYPES, 'max:'.self::MAX_KB, new MaxImageDimensions(self::MAX_IMAGE_DIMENSION, self::MAX_IMAGE_DIMENSION), new MaxVideoDuration(600)],
             'media_token' => ['prohibited'],
             'media_tokens' => ['sometimes', 'array', 'max:'.self::MAX_MEDIA_ITEMS],
             'media_tokens.*' => ['uuid'],

@@ -7,6 +7,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "codingmonkeys/laravel-fileflux": "^1.1",
         "filament/filament": "^5.6",
         "firebase/php-jwt": "^7.0",
         "intervention/image-laravel": "^4.0",

@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\SubmitVideoToFileFlux;
 use App\Jobs\TranscodeVideo;
 use App\Models\Circle;
 use App\Models\Post;
@@ -186,6 +187,7 @@ it('keeps single-mode posts working with one post_media row', function () {
 });
 
 it('dispatches TranscodeVideo for each video item with the PostMedia model', function () {
+    config(['services.fileflux.enabled' => false]);
     Bus::fake();
     Storage::fake('public');
     $user = User::factory()->create();
@@ -203,8 +205,28 @@ it('dispatches TranscodeVideo for each video item with the PostMedia model', fun
     });
 });
 
+it('dispatches SubmitVideoToFileFlux when fileflux is enabled', function () {
+    config(['services.fileflux.enabled' => true]);
+    Bus::fake();
+    Storage::fake('public');
+    $user = User::factory()->create();
+    $circle = Circle::factory()->create(['user_id' => $user->id]);
+
+    $this->actingAs($user)
+        ->postJson('/api/posts', [
+            'media' => UploadedFile::fake()->create('clip.mp4', 1024, 'video/mp4'),
+            'circle_ids' => [$circle->id],
+        ])
+        ->assertCreated();
+
+    Bus::assertDispatched(SubmitVideoToFileFlux::class, function ($job) {
+        return $job->postMedia instanceof PostMedia;
+    });
+    Bus::assertNotDispatched(TranscodeVideo::class);
+});
+
 it('applies HEIC orientation correction per item in multi-photo posts', function () {
-    if (! class_exists(\Imagick::class) || ! in_array('HEIC', \Imagick::queryFormats('HEIC'), true)) {
+    if (! class_exists(Imagick::class) || ! in_array('HEIC', Imagick::queryFormats('HEIC'), true)) {
         $this->markTestSkipped('Imagick build lacks HEIC support');
     }
 
