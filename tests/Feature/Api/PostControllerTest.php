@@ -1,10 +1,12 @@
 <?php
 
+use App\Enums\MediaStatus;
 use App\Models\Circle;
 use App\Models\Comment;
 use App\Models\Like;
 use App\Models\Person;
 use App\Models\Post;
+use App\Models\PostMedia;
 use App\Models\Tag;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -137,6 +139,41 @@ it('returns an original_media_url pointing at the originals folder when download
     $url = $response->json('data.original_media_url');
     expect($url)->toBeString()
         ->and($url)->toContain("users/{$owner->id}/originals/posts/abc123.jpg");
+});
+
+it('returns the explicit original_path for HLS posts ipv het broken master.m3u8 mapping', function () {
+    $owner = User::factory()->create();
+    $post = Post::factory()->create([
+        'user_id' => $owner->id,
+        'media_url' => "users/{$owner->id}/posts/hls/m1/master.m3u8",
+        'media_type' => 'video',
+    ]);
+
+    $sourcePath = "users/{$owner->id}/originals/posts/source-abc.mp4";
+
+    PostMedia::create([
+        'post_id' => $post->id,
+        'sort_order' => 0,
+        'path' => $post->media_url,
+        'original_path' => $sourcePath,
+        'type' => 'video',
+        'format' => 'hls',
+        'status' => MediaStatus::Ready,
+    ]);
+
+    $response = $this->actingAs($owner)
+        ->getJson("/api/posts/{$post->id}")
+        ->assertSuccessful();
+
+    $topLevel = $response->json('data.original_media_url');
+    $perItem = $response->json('data.media.0.original_url');
+
+    expect($topLevel)->toBeString()
+        // Mag NIET naar het broken originals/posts/hls/.../master.m3u8 wijzen.
+        ->and($topLevel)->not->toContain('originals/posts/hls/')
+        ->and($topLevel)->toContain('source-abc.mp4')
+        ->and($perItem)->toBeString()
+        ->and($perItem)->toContain('source-abc.mp4');
 });
 
 it('omits original_media_url when the post is not downloadable', function () {

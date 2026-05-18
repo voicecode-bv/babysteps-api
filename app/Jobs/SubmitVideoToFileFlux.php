@@ -121,6 +121,14 @@ class SubmitVideoToFileFlux implements ShouldQueue
         $currentPath = $this->postMedia->path;
 
         if (str_contains($currentPath, '/originals/')) {
+            // Idempotent: bij retry zit het al onder /originals/. We zetten
+            // `original_path` als die nog leeg is zodat de resource hem altijd
+            // kan vinden ongeacht of we via deze branch of de archive-branch
+            // kwamen.
+            if ($this->postMedia->original_path === null) {
+                $this->postMedia->update(['original_path' => $currentPath]);
+            }
+
             return $currentPath;
         }
 
@@ -132,12 +140,14 @@ class SubmitVideoToFileFlux implements ShouldQueue
         $disk->move($currentPath, $archivedPath);
         UserStorage::trackPut($archivedPath, $disk);
 
-        // We laten PostMedia.path tijdelijk naar de oude locatie wijzen tot
-        // ProcessFileFluxCallback hem op de master.m3u8 zet. Maar als FileFlux
-        // moet weten waar de bron staat: dat geven we via `->source()`.
-        // We slaan het pad expliciet op zodat de retry / fallback consistent
-        // werkt.
-        $this->postMedia->update(['path' => $archivedPath]);
+        // `path` blijft tijdelijk naar het origineel wijzen tot
+        // ProcessFileFluxCallback 'm overschrijft met master.m3u8. We slaan
+        // het origineel-pad apart op `original_path` zodat de resource z'n
+        // `original_url` correct kan genereren ook nadat `path` is geüpdatet.
+        $this->postMedia->update([
+            'path' => $archivedPath,
+            'original_path' => $archivedPath,
+        ]);
 
         return $archivedPath;
     }

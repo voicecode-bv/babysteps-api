@@ -59,6 +59,20 @@ it('archives the temp upload to /originals/ before submitting', function () {
         ->and(Storage::disk('public')->exists($this->media->path))->toBeTrue();
 });
 
+it('stores the archived original_path so PostResource can serve original_url for HLS', function () {
+    (new SubmitVideoToFileFlux($this->media))->handle();
+
+    $this->media->refresh();
+
+    // `original_path` wijst naar het bron-MP4 op /originals/posts/, niet naar
+    // het master.m3u8 dat later via ProcessFileFluxCallback in `path` komt.
+    expect($this->media->original_path)
+        ->not->toBeNull()
+        ->and($this->media->original_path)->toContain('/originals/posts/')
+        ->and($this->media->original_path)->toEndWith('.mp4')
+        ->and(Storage::disk('public')->exists($this->media->original_path))->toBeTrue();
+});
+
 it('submits a job to FileFlux with the configured ladder', function () {
     (new SubmitVideoToFileFlux($this->media))->handle();
 

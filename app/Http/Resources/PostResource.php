@@ -125,7 +125,7 @@ class PostResource extends JsonResource
             'id' => $this->id,
             'media_url' => MediaUrl::sign($this->media_url),
             'original_media_url' => $isDownloadable
-                ? MediaUrl::sign(MediaUrl::originalPath($this->media_url) ?? $this->media_url)
+                ? MediaUrl::sign($this->resolveOriginalMediaPath())
                 : null,
             'media_type' => $this->media_type,
             'thumbnail_url' => MediaUrl::sign($this->thumbnail_url),
@@ -154,7 +154,7 @@ class PostResource extends JsonResource
                 'sort_order' => $m->sort_order,
                 'url' => MediaUrl::sign($m->path),
                 'original_url' => $isDownloadable
-                    ? MediaUrl::sign(MediaUrl::originalPath($m->path) ?? $m->path)
+                    ? MediaUrl::sign($m->original_path ?? MediaUrl::originalPath($m->path) ?? $m->path)
                     : null,
                 'type' => $m->type,
                 'status' => $m->status?->value ?? 'ready',
@@ -212,5 +212,29 @@ class PostResource extends JsonResource
             'username' => $liker->username,
             'avatar' => MediaUrl::sign($liker->avatar),
         ];
+    }
+
+    /**
+     * Bepaal het pad naar de untouched original voor `original_media_url`.
+     *
+     * Voor HLS-posts ligt het origineel los van het display-pad: `path` wijst
+     * naar `master.m3u8`, het origineel naar `users/{uid}/originals/posts/{x}.mp4`.
+     * `MediaUrl::originalPath()` weet dat niet en zou een non-existent
+     * `originals/posts/hls/.../master.m3u8` produceren. Daarom prefereren we
+     * `original_path` van het eerste media-item — die wordt door
+     * SubmitVideoToFileFlux gezet op het echte source-pad.
+     *
+     * Voor legacy mp4/foto posts (geen `original_path` gevuld) blijven we de
+     * bestaande heuristiek aanhouden zodat oude rijen blijven werken.
+     */
+    private function resolveOriginalMediaPath(): ?string
+    {
+        $firstMedia = $this->resource->media?->first();
+
+        if ($firstMedia && $firstMedia->original_path) {
+            return $firstMedia->original_path;
+        }
+
+        return MediaUrl::originalPath($this->media_url) ?? $this->media_url;
     }
 }

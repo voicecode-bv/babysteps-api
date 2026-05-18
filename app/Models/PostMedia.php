@@ -12,7 +12,7 @@ use MatanYadaev\EloquentSpatial\Objects\Point;
 use MatanYadaev\EloquentSpatial\Traits\HasSpatial;
 
 #[Fillable([
-    'post_id', 'sort_order', 'path', 'type', 'format', 'status',
+    'post_id', 'sort_order', 'path', 'original_path', 'type', 'format', 'status',
     'thumbnail_path', 'thumbnail_small_path', 'taken_at', 'coordinates',
     'external_job_id', 'processing_started_at',
 ])]
