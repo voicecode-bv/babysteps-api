@@ -11,6 +11,7 @@ use App\Http\Resources\CircleResource;
 use App\Models\Circle;
 use App\Models\Post;
 use App\Models\User;
+use App\Rules\MaxImageDimensions;
 use App\Services\MediaUploadService;
 use App\Services\MemberPersonSyncer;
 use App\Support\MediaUrl;
@@ -325,7 +326,7 @@ class CircleController extends Controller
         $this->authorize('update', $circle);
 
         $request->validate([
-            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,gif,heic,heif', 'max:10240'],
+            'photo' => ['required', 'image', 'mimes:jpg,jpeg,png,gif,heic,heif', 'max:10240', new MaxImageDimensions(4096, 4096)],
         ]);
 
         $media->delete($circle->photo);

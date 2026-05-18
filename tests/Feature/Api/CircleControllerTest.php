@@ -5,7 +5,9 @@ use App\Models\Circle;
 use App\Models\CircleInvitation;
 use App\Models\Post;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 it('returns circles owned by the user with is_owner true', function () {
@@ -350,4 +352,18 @@ it('prunes notifications for non-owners when a circle is deleted and posts lose 
 
     expect(DB::table('notifications')->where('notifiable_id', $member->id)->count())->toBe(0);
     expect(DB::table('notifications')->where('notifiable_id', $owner->id)->count())->toBe(1);
+});
+
+it('rejects oversized circle photo dimensions', function () {
+    Storage::fake('public');
+
+    $owner = User::factory()->create();
+    $circle = Circle::factory()->for($owner)->create();
+
+    $this->actingAs($owner)
+        ->postJson("/api/circles/{$circle->id}/photo", [
+            'photo' => UploadedFile::fake()->image('huge.jpg', 5000, 5000),
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('photo');
 });

@@ -477,6 +477,19 @@ it('validates avatar is required for upload', function () {
         ->assertJsonValidationErrors('avatar');
 });
 
+it('rejects oversized avatar dimensions', function () {
+    Storage::fake('public');
+
+    $user = User::factory()->create();
+
+    $this->actingAs($user)
+        ->postJson('/api/profile/avatar', [
+            'avatar' => UploadedFile::fake()->image('huge.jpg', 5000, 5000),
+        ])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('avatar');
+});
+
 it('requires authentication to upload avatar', function () {
     $this->postJson('/api/profile/avatar', [])
         ->assertUnauthorized();

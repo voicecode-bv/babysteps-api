@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Rules\AccessibleCircle;
+use App\Rules\MaxImageDimensions;
 use App\Rules\MaxVideoDuration;
 use App\Rules\OwnedTag;
 use App\Rules\TaggablePerson;
@@ -17,6 +18,16 @@ class StorePostRequest extends FormRequest
     private const MAX_KB = 256000;
 
     public const MAX_MEDIA_ITEMS = 10;
+
+    /**
+     * Cap voor afbeeldings-resolutie. Een 50 MP smartphone-foto haalt
+     * ~8000×6000; 12000×12000 geeft marge voor stitched/medium-format
+     * uploads en houdt decompression-bombs (50000×50000 PNG die naar GB-RAM
+     * uitpakt tijdens thumbnail-generatie) buiten de deur. Wordt door
+     * Laravels `dimensions:`-rule alleen op image-files toegepast; video's
+     * passeren ongemoeid.
+     */
+    private const MAX_IMAGE_DIMENSION = 12000;
 
     public function authorize(): bool
     {
@@ -63,7 +74,7 @@ class StorePostRequest extends FormRequest
     private function singleRules(): array
     {
         return [
-            'media' => ['required', 'file', 'mimes:'.self::MIME_TYPES, 'max:'.self::MAX_KB, new MaxVideoDuration(180)],
+            'media' => ['required', 'file', 'mimes:'.self::MIME_TYPES, 'max:'.self::MAX_KB, new MaxImageDimensions(self::MAX_IMAGE_DIMENSION, self::MAX_IMAGE_DIMENSION), new MaxVideoDuration(180)],
             'caption' => ['nullable', 'string', 'max:2200'],
             'location' => ['nullable', 'string', 'max:255'],
             'taken_at' => ['nullable', 'date', 'before_or_equal:now', 'after:1990-01-01'],
@@ -85,7 +96,7 @@ class StorePostRequest extends FormRequest
     {
         return [
             'media' => ['required', 'array', 'min:1', 'max:'.self::MAX_MEDIA_ITEMS],
-            'media.*' => ['file', 'mimes:'.self::MIME_TYPES, 'max:'.self::MAX_KB, new MaxVideoDuration(180)],
+            'media.*' => ['file', 'mimes:'.self::MIME_TYPES, 'max:'.self::MAX_KB, new MaxImageDimensions(self::MAX_IMAGE_DIMENSION, self::MAX_IMAGE_DIMENSION), new MaxVideoDuration(180)],
             'media_metadata' => ['nullable', 'array', 'max:'.self::MAX_MEDIA_ITEMS],
             'media_metadata.*' => ['array'],
             'media_metadata.*.taken_at' => ['nullable', 'date', 'before_or_equal:now', 'after:1990-01-01'],
