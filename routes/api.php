@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\FeatureTourStartedController;
 use App\Http\Controllers\Api\FeatureTourStatusController;
 use App\Http\Controllers\Api\FeedController;
 use App\Http\Controllers\Api\LikeController;
+use App\Http\Controllers\Api\MediaHlsController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\NotificationPreferenceController;
 use App\Http\Controllers\Api\OAuthController;
@@ -47,6 +48,19 @@ use App\Http\Controllers\Api\Webhooks\GoogleWebhookController;
 use App\Http\Controllers\Api\Webhooks\MollieWebhookController;
 use App\Http\Controllers\MediaController;
 use Illuminate\Support\Facades\Route;
+
+// HLS playlist proxy: auth via opake cache-token in het pad (uitgegeven door
+// MediaUrl::sign() voor .m3u8 paden). De controller herschrijft master/variants
+// met embedded signed URLs zodat segments alsnog door BunnyCDN's token-auth heen
+// komen — relative URL resolution dropt anders de query string.
+//
+// Moet vóór de generieke `/media/{path}` route staan; anders matcht die met
+// `.*` constraint hierop en stuurt MediaController een 403 wegens missing
+// `signature`.
+Route::get('/media/hls/{token}/{file}', MediaHlsController::class)
+    ->where('file', '.*')
+    ->whereUuid('token')
+    ->name('api.media.hls');
 
 Route::get('/media/{path}', MediaController::class)
     ->where('path', '.*')

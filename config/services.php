@@ -93,7 +93,10 @@ return [
         'project_id' => env('FILEFLUX_PROJECT_ID'),
         'api_key' => env('FILEFLUX_API_KEY'),
         'webhook_secret' => env('FILEFLUX_WEBHOOK_SIGNATURE'),
-        'callback_url' => env('FILEFLUX_CALLBACK_URL', env('APP_URL').'/api/webhooks/media/fileflux'),
+        // Eén env voor de callback URL — gedeeld met de package's default in
+        // `config/fileflux.php`. App fallback alleen voor lokaal dev; in
+        // productie altijd expliciet zetten.
+        'callback_url' => env('FILEFLUX_WEBHOOK_URL', env('APP_URL').'/api/webhooks/media/fileflux'),
         'job_timeout_minutes' => env('FILEFLUX_JOB_TIMEOUT_MINUTES', 30),
 
         /*

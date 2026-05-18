@@ -91,7 +91,7 @@ it('falls back to a signed Laravel route when Bunny is not configured', function
     expect($url)->toContain('signature=');
 });
 
-it('signs an HLS master playlist with a Bunny directory token', function () {
+it('signs an HLS master playlist via the MediaHlsController proxy', function () {
     Carbon::setTestNow('2026-04-27 10:15:00');
 
     config([
@@ -101,16 +101,15 @@ it('signs an HLS master playlist with a Bunny directory token', function () {
 
     $url = MediaUrl::sign('users/abc/posts/hls/m1/master.m3u8');
 
-    // Directory-token signatures carry token_path zodat segments + variant
-    // playlists onder dezelfde prefix dezelfde token kunnen gebruiken.
+    // HLS-master gaat NIET direct via BunnyCDN: relative URL resolution dropt
+    // de query string, dus segments zouden zonder token bij BunnyCDN aankomen.
+    // We routeren door onze eigen proxy die de m3u8 inhoud herschrijft.
     expect($url)
-        ->toStartWith('https://media.innerr.app/users/abc/posts/hls/m1/master.m3u8?')
-        ->toContain('token=HS256-')
-        ->toContain('token_path=')
-        ->toContain('expires=');
+        ->toContain('/api/media/hls/')
+        ->toEndWith('/master.m3u8');
 });
 
-it('falls back to a signed Laravel route for HLS when Bunny is not configured', function () {
+it('uses the same proxy URL format whether Bunny is configured or not', function () {
     Carbon::setTestNow('2026-04-27 10:15:00');
 
     config([
@@ -121,7 +120,6 @@ it('falls back to a signed Laravel route for HLS when Bunny is not configured', 
     $url = MediaUrl::sign('users/abc/posts/hls/m1/master.m3u8');
 
     expect($url)
-        ->toContain('/api/media/')
-        ->toContain('master.m3u8')
-        ->toContain('signature=');
+        ->toContain('/api/media/hls/')
+        ->toEndWith('/master.m3u8');
 });

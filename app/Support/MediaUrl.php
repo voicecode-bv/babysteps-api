@@ -2,10 +2,13 @@
 
 namespace App\Support;
 
+use App\Http\Controllers\Api\MediaHlsController;
 use App\Services\BunnyCdn\UrlSigner as BunnyCdnUrlSigner;
 use Illuminate\Contracts\Filesystem\Filesystem;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Str;
 
 class MediaUrl
 {
@@ -57,23 +60,39 @@ class MediaUrl
     }
 
     /**
-     * Sign een HLS master playlist met een BunnyCDN directory-token. Voor
-     * dev/test omgevingen zonder BunnyCDN valt het terug naar een per-file
-     * signed route — voldoende voor unit tests, maar in productie wil je
-     * altijd BunnyCDN met directory-tokens zodat segments delen.
+     * Sign een HLS master playlist door een korte cache-token uit te geven
+     * die het pad-prefix bevat, en de URL naar onze MediaHlsController te
+     * laten wijzen. Die controller serveert master + variants met embedded
+     * signed URLs zodat de player niet vastloopt op BunnyCDN's token-auth
+     * (relative URL resolution dropt de query string van de base; segments
+     * komen anders zonder token aan).
+     *
+     * Segments + init.mp4 worden binnen die controller naar direct-signed
+     * BunnyCDN URLs herschreven — die hitten dus gewoon de edge cache.
      */
     protected static function signHlsMaster(string $path, \DateTimeInterface $expires): string
     {
-        $bunny = BunnyCdnUrlSigner::fromConfig();
+        $directory = dirname($path).'/';
+        $filename = basename($path);
 
-        if ($bunny !== null) {
-            $directory = dirname($path).'/';
-            $filename = basename($path);
+        $token = (string) Str::uuid();
+        Cache::put(
+            MediaHlsController::TOKEN_CACHE_PREFIX.$token,
+            ['prefix' => $directory],
+            $expires,
+        );
 
-            return $bunny->signDirectory($directory, $filename, $expires);
-        }
+        return url('/api/media/hls/'.$token.'/'.$filename);
+    }
 
-        return URL::signedRoute('api.media', ['path' => $path], $expires);
+    /**
+     * Expiry voor HLS-segment URLs en de master-token. Identiek aan de
+     * algemene expiry() — public zodat MediaHlsController dezelfde window
+     * gebruikt voor zijn rewrite.
+     */
+    public static function expiryForHls(): \DateTimeInterface
+    {
+        return static::expiry();
     }
 
     /**
